@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="cclimits — see the usage limits of every Claude Code account you own, at once">
+  <rect width="1280" height="640" fill="#0d1117"/>
+  <rect x="0" y="0" width="1280" height="4" fill="#3fb950"/>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Helvetica,Arial,sans-serif">
+    <text x="72" y="118" fill="#e6edf3" font-size="58" font-weight="700">cclimits</text>
+    <text x="72" y="170" fill="#8b949e" font-size="25">See the usage limits of every Claude Code account you own, at once.</text>
+    <text x="72" y="600" fill="#8b949e" font-size="20">github.com/acrdlph/cclimits</text>
+  </g>
+  <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="24">
+    <text x="72.0" y="262.4" fill="#8b949e" xml:space="preserve">ACCOUNT </text>
+    <text x="216.0" y="262.4" fill="#8b949e" xml:space="preserve">PLAN</text>
+    <text x="302.4" y="262.4" fill="#8b949e" xml:space="preserve">SESSION      </text>
+    <text x="518.4" y="262.4" fill="#8b949e" xml:space="preserve">WEEKLY       </text>
+    <text x="734.4" y="262.4" fill="#8b949e" xml:space="preserve">FABLE        </text>
+    <text x="72.0" y="295.4" fill="#e6edf3" font-weight="600" xml:space="preserve">default</text>
+    <text x="172.8" y="295.4" fill="#e6edf3" xml:space="preserve">   max   </text>
+    <text x="302.4" y="295.4" fill="#8b949e" xml:space="preserve">░░░░░░░░</text>
+    <text x="417.6" y="295.4" fill="#e6edf3" xml:space="preserve">   6%  </text>
+    <text x="518.4" y="295.4" fill="#d29922" xml:space="preserve">█████</text>
+    <text x="590.4" y="295.4" fill="#8b949e" xml:space="preserve">░░░</text>
+    <text x="633.6" y="295.4" fill="#e6edf3" xml:space="preserve">  65%  </text>
+    <text x="734.4" y="295.4" fill="#ff7b72" xml:space="preserve">████████</text>
+    <text x="849.6" y="295.4" fill="#e6edf3" xml:space="preserve"> 100%</text>
+    <text x="72.0" y="328.4" fill="#e6edf3" font-weight="600" xml:space="preserve">work</text>
+    <text x="129.6" y="328.4" fill="#e6edf3" xml:space="preserve">      max   </text>
+    <text x="302.4" y="328.4" fill="#f85149" xml:space="preserve">████████</text>
+    <text x="417.6" y="328.4" fill="#e6edf3" xml:space="preserve">  96%  </text>
+    <text x="518.4" y="328.4" fill="#f85149" xml:space="preserve">████████</text>
+    <text x="633.6" y="328.4" fill="#e6edf3" xml:space="preserve">  98%  </text>
+    <text x="734.4" y="328.4" fill="#d29922" xml:space="preserve">██████</text>
+    <text x="820.8" y="328.4" fill="#8b949e" xml:space="preserve">░░</text>
+    <text x="849.6" y="328.4" fill="#e6edf3" xml:space="preserve">  69%</text>
+    <text x="72.0" y="361.4" fill="#e6edf3" font-weight="600" xml:space="preserve">spare</text>
+    <text x="144.0" y="361.4" fill="#e6edf3" xml:space="preserve">     max   </text>
+    <text x="302.4" y="361.4" fill="#3fb950" xml:space="preserve">█</text>
+    <text x="316.8" y="361.4" fill="#8b949e" xml:space="preserve">░░░░░░░</text>
+    <text x="417.6" y="361.4" fill="#e6edf3" xml:space="preserve">   7%  </text>
+    <text x="518.4" y="361.4" fill="#f85149" xml:space="preserve">███████</text>
+    <text x="619.2" y="361.4" fill="#8b949e" xml:space="preserve">░</text>
+    <text x="633.6" y="361.4" fill="#e6edf3" xml:space="preserve">  83%  </text>
+    <text x="734.4" y="361.4" fill="#ff7b72" xml:space="preserve">████████</text>
+    <text x="849.6" y="361.4" fill="#e6edf3" xml:space="preserve"> 100%</text>
+    <text x="72.0" y="394.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account4</text>
+    <text x="187.2" y="394.4" fill="#e6edf3" xml:space="preserve">  max   </text>
+    <text x="302.4" y="394.4" fill="#ff7b72" xml:space="preserve">████████</text>
+    <text x="417.6" y="394.4" fill="#e6edf3" xml:space="preserve"> 100%  </text>
+    <text x="518.4" y="394.4" fill="#3fb950" xml:space="preserve">██</text>
+    <text x="547.2" y="394.4" fill="#8b949e" xml:space="preserve">░░░░░░</text>
+    <text x="633.6" y="394.4" fill="#e6edf3" xml:space="preserve">  21%  </text>
+    <text x="734.4" y="394.4" fill="#3fb950" xml:space="preserve">█</text>
+    <text x="748.8" y="394.4" fill="#8b949e" xml:space="preserve">░░░░░░░</text>
+    <text x="849.6" y="394.4" fill="#e6edf3" xml:space="preserve">  16%</text>
+    <text x="72.0" y="427.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account5</text>
+    <text x="187.2" y="427.4" fill="#e6edf3" xml:space="preserve">  max   </text>
+    <text x="302.4" y="427.4" fill="#8b949e" xml:space="preserve">░░░░░░░░</text>
+    <text x="417.6" y="427.4" fill="#e6edf3" xml:space="preserve">   0%  </text>
+    <text x="518.4" y="427.4" fill="#ff7b72" xml:space="preserve">████████</text>
+    <text x="633.6" y="427.4" fill="#e6edf3" xml:space="preserve"> 100%  </text>
+    <text x="734.4" y="427.4" fill="#d29922" xml:space="preserve">█████</text>
+    <text x="806.4" y="427.4" fill="#8b949e" xml:space="preserve">░░░</text>
+    <text x="849.6" y="427.4" fill="#e6edf3" xml:space="preserve">  65%</text>
+    <text x="72.0" y="460.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account6</text>
+    <text x="187.2" y="460.4" fill="#e6edf3" xml:space="preserve">  max   </text>
+    <text x="302.4" y="460.4" fill="#ff7b72" xml:space="preserve">████████</text>
+    <text x="417.6" y="460.4" fill="#e6edf3" xml:space="preserve"> 100%  </text>
+    <text x="518.4" y="460.4" fill="#d29922" xml:space="preserve">█████</text>
+    <text x="590.4" y="460.4" fill="#8b949e" xml:space="preserve">░░░</text>
+    <text x="633.6" y="460.4" fill="#e6edf3" xml:space="preserve">  59%  </text>
+    <text x="734.4" y="460.4" fill="#d29922" xml:space="preserve">██████</text>
+    <text x="820.8" y="460.4" fill="#8b949e" xml:space="preserve">░░</text>
+    <text x="849.6" y="460.4" fill="#e6edf3" xml:space="preserve">  77%</text>
+    <text x="72.0" y="526.4" fill="#8b949e" xml:space="preserve">next session reset in 1h 1m  next weekly reset in 12h 31m</text>
+    <text x="72.0" y="559.4" fill="#8b949e" xml:space="preserve">→ most headroom: </text>
+    <text x="316.8" y="559.4" fill="#79c0ff" font-weight="600" xml:space="preserve">default</text>
+    <text x="417.6" y="559.4" fill="#8b949e" xml:space="preserve">  (35% free)  </text>
+  </g>
+</svg>

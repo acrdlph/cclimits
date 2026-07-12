@@ -234,12 +234,16 @@ PYTHONPATH=src uv run --with pytest --no-project pytest tests/ -q
 
 The tests are offline — no network, no Keychain.
 
-The README screenshot is generated from the real renderer, so it cannot drift from what the
-tool actually prints. Regenerate it after any change to the output:
+The images are generated from the real renderer, so they cannot drift from what the tool
+actually prints. Regenerate them after any change to the output:
 
 ```bash
-python3 scripts/make_screenshot.py   # -> docs/screenshot.svg
+python3 scripts/make_screenshot.py                                   # -> docs/screenshot.svg, docs/social.svg
+rsvg-convert -w 1280 -h 640 docs/social.svg -o docs/social.png       # GitHub rejects SVG here
 ```
+
+`docs/social.png` is the 1280×640 link-preview card. It is not picked up from the repo
+automatically — upload it under **Settings → General → Social preview**.
 
 ## License
 
