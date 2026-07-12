@@ -7,16 +7,10 @@ run several accounts (personal, work, a spare for when the weekly limit bites), 
 to know where you stand is to log into each one and look. `cclimits` reads them all in
 parallel and prints one table.
 
-```
-ACCOUNT   PLAN  SESSION        WEEKLY         FABLE
-default   max   ░░░░░░░░   6%  █████░░░  65%  ████████ 100%
-work      max   ████████  96%  ████████  98%  ██████░░  69%
-spare     max   ░░░░░░░░   5%  ███████░  82%  ████████ 100%
-account4  max   ████████ 100%  ██░░░░░░  21%  █░░░░░░░  16%
+<img src="docs/screenshot.svg" alt="cclimits showing session, weekly and Fable limits for six accounts, with colored usage bars" width="640">
 
-next session reset in 1h 2m  next weekly reset in 12h 32m
-→ most headroom: default  (35% free)  export CLAUDE_CONFIG_DIR=/Users/you/.claude
-```
+Bars are green under 50%, amber to 80%, red above, and the account with the most room to work
+in is called out at the bottom.
 
 Accounts are named after their config directory, so `~/.claude-work` shows up as `work`.
 **No email address is fetched or stored** unless you ask for one with `--email` — which keeps
@@ -239,6 +233,13 @@ PYTHONPATH=src uv run --with pytest --no-project pytest tests/ -q
 ```
 
 The tests are offline — no network, no Keychain.
+
+The README screenshot is generated from the real renderer, so it cannot drift from what the
+tool actually prints. Regenerate it after any change to the output:
+
+```bash
+python3 scripts/make_screenshot.py   # -> docs/screenshot.svg
+```
 
 ## License
 

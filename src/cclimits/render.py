@@ -52,9 +52,14 @@ class Painter:
 
 
 def bar(percent: float, paint: Painter, width: int = BAR_WIDTH) -> str:
+    """Filled portion takes the severity tint; the remainder stays neutral.
+
+    Tinting the whole bar makes a 6% bar read as a solid green block — the eye
+    catches color long before it catches texture, so only the filled part is
+    allowed to carry it.
+    """
     filled = min(width, round(percent / 100 * width))
-    glyphs = FULL * filled + EMPTY * (width - filled)
-    return paint(glyphs, _tint(percent))
+    return paint(FULL * filled, _tint(percent)) + paint(EMPTY * (width - filled), DIM)
 
 
 def humanize(seconds: Optional[float]) -> str:
