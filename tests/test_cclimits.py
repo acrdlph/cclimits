@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -248,6 +249,66 @@ def test_footer_ignores_broken_accounts():
     good = _account_with_resets("good", 50, session_in=30, weekly_in=60)
     out = render.render_table([broken, good], color=False)
     assert "next session reset: good in" in out
+
+
+def _limits(session, weekly, fable=0, session_active=False, weekly_active=False):
+    now = datetime.now(timezone.utc)
+    return [
+        model.Limit(
+            "Session", model.SESSION, session, now + timedelta(hours=1), exhausted_now=session_active
+        ),
+        model.Limit(
+            "Weekly", model.WEEKLY, weekly, now + timedelta(days=3), exhausted_now=weekly_active
+        ),
+        model.Limit("Fable", model.WEEKLY, fable, now + timedelta(days=3), is_model_scoped=True),
+    ]
+
+
+def _usage(**kwargs) -> model.AccountUsage:
+    return model.AccountUsage(slug="t", config_dir=Path("/tmp/t"), limits=_limits(**kwargs))
+
+
+def test_usable_account_is_not_blocked():
+    assert _usage(session=10, weekly=20).blocked_until is None
+
+
+def test_spent_session_blocks_until_the_session_resets():
+    account = _usage(session=100, weekly=20)
+    assert account.blocked_until == account.session.resets_at
+
+
+def test_both_spent_means_free_only_when_the_LATER_one_resets():
+    """Session resetting does not help while weekly is still exhausted."""
+    account = _usage(session=100, weekly=100)
+    assert account.blocked_until == account.weekly.resets_at
+
+
+def test_a_spent_model_limit_does_not_block_the_account():
+    """Fable at 100% stops you using Fable, not Sonnet."""
+    assert _usage(session=5, weekly=5, fable=100).blocked_until is None
+
+
+def test_api_can_flag_a_limit_as_blocking_below_100_percent():
+    """Observed in the wild: weekly reads 98% but the API says it is blocking.
+    The flag is authoritative; the rounded percentage is not."""
+    account = _usage(session=0, weekly=98, weekly_active=True)
+    assert account.blocked_until == account.weekly.resets_at
+
+
+def test_free_in_column_is_filled_only_for_blocked_accounts():
+    blocked = model.AccountUsage(
+        slug="blocked", config_dir=Path("/tmp/b"), limits=_limits(session=100, weekly=20)
+    )
+    usable = model.AccountUsage(
+        slug="usable", config_dir=Path("/tmp/u"), limits=_limits(session=10, weekly=20)
+    )
+    rows = {
+        line.split()[0]: line
+        for line in render.render_table([blocked, usable], color=False).splitlines()
+        if line[:1].isalpha()
+    }
+    assert re.search(r"\d+[hm]\s*$", rows["blocked"]), "blocked account should show a wait"
+    assert not re.search(r"\d+[hm]\s*$", rows["usable"]), "usable account should show nothing"
 
 
 def test_table_renders_a_column_per_model_scoped_limit():

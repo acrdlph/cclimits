@@ -86,6 +86,14 @@ def _cell(limit: Optional[Limit], paint: Painter) -> str:
     return text
 
 
+def _free_cell(account: AccountUsage, paint: Painter) -> str:
+    """How long until a blocked account is usable again; blank if it is usable now."""
+    seconds = account.blocked_for_seconds()
+    if seconds is None:
+        return ""
+    return paint(humanize(seconds), BRIGHT_RED)
+
+
 def _visible_len(text: str) -> int:
     """Length ignoring ANSI escapes, so columns line up when colored."""
     out, in_escape = 0, False
@@ -118,7 +126,14 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
                 model_names.append(limit.label)
     model_names.sort()
 
-    headers = ["ACCOUNT", "PLAN", "SESSION", "WEEKLY", *(name.upper() for name in model_names)]
+    headers = [
+        "ACCOUNT",
+        "PLAN",
+        "SESSION",
+        "WEEKLY",
+        *(name.upper() for name in model_names),
+        "FREE IN",
+    ]
 
     # Broken accounts are rendered as a name plus a free-text reason. They are
     # kept out of the width computation so one long error message cannot blow
@@ -131,6 +146,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
             _cell(account.session, paint),
             _cell(account.weekly, paint),
             *(_cell(account.find(name), paint) for name in model_names),
+            _free_cell(account, paint),
         ]
         for account in healthy
     }

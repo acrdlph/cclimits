@@ -99,6 +99,33 @@ class AccountUsage:
         return [limit for limit in self.limits if limit.is_model_scoped]
 
     @property
+    def blocked_until(self) -> Optional[datetime]:
+        """When this account can be used again, or None if it is usable now.
+
+        Two things this is careful about:
+
+        * A model-scoped limit does not block the account. Fable at 100% stops
+          you using Fable, not Sonnet, so it never lands here.
+        * If both session and weekly are spent, you are free at the *later* of
+          the two. The session resetting does not help while weekly is still
+          exhausted — so this is a max(), not a min().
+        """
+        spent = [
+            limit
+            for limit in self.limits
+            if not limit.is_model_scoped and (limit.exhausted_now or limit.percent >= 100)
+        ]
+        resets = [limit.resets_at for limit in spent if limit.resets_at]
+        return max(resets) if resets else None
+
+    def blocked_for_seconds(self, now: Optional[datetime] = None) -> Optional[float]:
+        until = self.blocked_until
+        if until is None:
+            return None
+        now = now or datetime.now(timezone.utc)
+        return max(0.0, (until - now).total_seconds())
+
+    @property
     def headroom(self) -> float:
         """Free capacity on the binding constraint, ignoring model-scoped caps.
 
