@@ -69,9 +69,14 @@
     <text x="734.4" y="460.4" fill="#d29922" xml:space="preserve">██████</text>
     <text x="820.8" y="460.4" fill="#8b949e" xml:space="preserve">░░</text>
     <text x="849.6" y="460.4" fill="#e6edf3" xml:space="preserve">  77%</text>
-    <text x="72.0" y="526.4" fill="#8b949e" xml:space="preserve">next session reset in 1h 1m  next weekly reset in 12h 31m</text>
+    <text x="72.0" y="526.4" fill="#8b949e" xml:space="preserve">next session reset: </text>
+    <text x="360.0" y="526.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account6</text>
+    <text x="475.2" y="526.4" fill="#8b949e" xml:space="preserve"> in 1h 1m</text>
+    <text x="648.0" y="526.4" fill="#8b949e" xml:space="preserve">next weekly reset: </text>
+    <text x="921.6" y="526.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account5</text>
+    <text x="1036.8" y="526.4" fill="#8b949e" xml:space="preserve"> in 12h 31m</text>
     <text x="72.0" y="559.4" fill="#8b949e" xml:space="preserve">→ most headroom: </text>
     <text x="316.8" y="559.4" fill="#79c0ff" font-weight="600" xml:space="preserve">default</text>
-    <text x="417.6" y="559.4" fill="#8b949e" xml:space="preserve">  (35% free)  </text>
+    <text x="417.6" y="559.4" fill="#8b949e" xml:space="preserve">  (35% free)</text>
   </g>
 </svg>

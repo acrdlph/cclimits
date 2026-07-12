@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="724" height="254" viewBox="0 0 724 254" role="img" aria-label="cclimits terminal output">
-  <rect width="724" height="254" rx="10" fill="#0d1117"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="699" height="254" viewBox="0 0 699 254" role="img" aria-label="cclimits terminal output">
+  <rect width="699" height="254" rx="10" fill="#0d1117"/>
   <g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14">
     <text x="22.0" y="38.8" fill="#8b949e" xml:space="preserve">ACCOUNT </text>
     <text x="106.0" y="38.8" fill="#8b949e" xml:space="preserve">PLAN</text>
@@ -63,10 +63,14 @@
     <text x="408.4" y="164.8" fill="#d29922" xml:space="preserve">██████</text>
     <text x="458.8" y="164.8" fill="#8b949e" xml:space="preserve">░░</text>
     <text x="475.6" y="164.8" fill="#e6edf3" xml:space="preserve">  77%</text>
-    <text x="22.0" y="206.8" fill="#8b949e" xml:space="preserve">next session reset in 1h 1m  next weekly reset in 12h 31m</text>
+    <text x="22.0" y="206.8" fill="#8b949e" xml:space="preserve">next session reset: </text>
+    <text x="190.0" y="206.8" fill="#e6edf3" font-weight="600" xml:space="preserve">account6</text>
+    <text x="257.2" y="206.8" fill="#8b949e" xml:space="preserve"> in 1h 1m</text>
+    <text x="358.0" y="206.8" fill="#8b949e" xml:space="preserve">next weekly reset: </text>
+    <text x="517.6" y="206.8" fill="#e6edf3" font-weight="600" xml:space="preserve">account5</text>
+    <text x="584.8" y="206.8" fill="#8b949e" xml:space="preserve"> in 12h 31m</text>
     <text x="22.0" y="227.8" fill="#8b949e" xml:space="preserve">→ most headroom: </text>
     <text x="164.8" y="227.8" fill="#79c0ff" font-weight="600" xml:space="preserve">default</text>
-    <text x="223.6" y="227.8" fill="#8b949e" xml:space="preserve">  (35% free)  </text>
-    <text x="341.2" y="227.8" fill="#8b949e" xml:space="preserve">export CLAUDE_CONFIG_DIR=/Users/you/.claude</text>
+    <text x="223.6" y="227.8" fill="#8b949e" xml:space="preserve">  (35% free)</text>
   </g>
 </svg>

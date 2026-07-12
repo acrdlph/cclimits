@@ -124,15 +124,14 @@ CLAUDE_CONFIG_DIR=~/.claude-spare      claude   # a third, and so on
 
 Any directory name works. `cclimits` autodiscovers `~/.claude` and `~/.claude-*`.
 
-**2. Add shell helpers** so switching is one word. In `~/.zshrc` or `~/.bashrc`:
+**2. Add the shell integration** so switching is one word. In `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-ccwork()  { export CLAUDE_CONFIG_DIR=~/.claude-work;  echo "→ work";  }
-ccspare() { export CLAUDE_CONFIG_DIR=~/.claude-spare; echo "→ spare"; }
-ccmine()  { unset CLAUDE_CONFIG_DIR;                  echo "→ default"; }
+eval "$(cclimits --shell-init zsh)"    # or: bash
 ```
 
-`CLAUDE_CONFIG_DIR` is read per process, so it only affects the shell you set it in.
+That gives you [`cc`](#switching-accounts-the-cc-command) — `cc 2`, `cc best`, `cc 4 claude`.
+`CLAUDE_CONFIG_DIR` is read per process, so a switch only affects the shell you make it in.
 
 **3. Check where you stand:**
 

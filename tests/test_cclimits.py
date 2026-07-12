@@ -221,6 +221,42 @@ def test_expired_credentials_are_detected():
     assert not fresh.is_expired
 
 
+def _account_with_resets(slug, session_pct, session_in, weekly_in):
+    now = datetime.now(timezone.utc)
+    return model.AccountUsage(
+        slug=slug,
+        config_dir=Path("/tmp") / slug,
+        limits=[
+            model.Limit("Session", model.SESSION, session_pct, now + timedelta(minutes=session_in)),
+            model.Limit("Weekly", model.WEEKLY, 50, now + timedelta(minutes=weekly_in)),
+        ],
+    )
+
+
+def test_footer_names_the_account_that_frees_up_first():
+    # Durations are asserted in test_humanize; what matters here is *which*
+    # account each reset is attributed to — the two are deliberately different.
+    soon = _account_with_resets("soon", 100, session_in=10, weekly_in=999)
+    later = _account_with_resets("later", 100, session_in=500, weekly_in=100)
+    out = render.render_table([later, soon], color=False)
+    assert "next session reset: soon in" in out
+    assert "next weekly reset: later in" in out
+
+
+def test_footer_ignores_broken_accounts():
+    broken = model.AccountUsage(slug="broken", config_dir=Path("/tmp/b"), error="expired")
+    good = _account_with_resets("good", 50, session_in=30, weekly_in=60)
+    out = render.render_table([broken, good], color=False)
+    assert "next session reset: good in" in out
+
+
+def test_recommendation_no_longer_prints_the_export_line():
+    """`cc best` supersedes it; the raw path is just noise in the table."""
+    out = render.render_table([_account(10, 20)], color=False)
+    assert "most headroom" in out
+    assert "export CLAUDE_CONFIG_DIR" not in out
+
+
 def test_table_renders_a_column_per_model_scoped_limit():
     out = render.render_table([_account(10, 20, fable=30)], color=False)
     assert "SESSION" in out and "WEEKLY" in out and "FABLE" in out

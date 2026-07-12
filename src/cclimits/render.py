@@ -8,7 +8,7 @@ import sys
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from .model import AccountUsage, Limit
+from .model import SESSION, WEEKLY, AccountUsage, Limit
 
 BAR_WIDTH = 12
 FULL, EMPTY = "█", "░"
@@ -163,31 +163,45 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
     return "\n".join(lines)
 
 
+def _soonest_reset(accounts: List[AccountUsage], group: str):
+    """The (account, seconds) pair whose limit in this group resets first."""
+    candidates = []
+    for account in accounts:
+        if not account.ok:
+            continue
+        limit = account.session if group == SESSION else account.weekly
+        if limit is None:
+            continue
+        seconds = limit.resets_in_seconds()
+        if seconds is not None:
+            candidates.append((account, seconds))
+    return min(candidates, key=lambda pair: pair[1]) if candidates else None
+
+
 def _reset_footer(accounts: List[AccountUsage], paint: Painter) -> str:
-    """Soonest session and weekly reset across all healthy accounts."""
-    healthy = [account for account in accounts if account.ok]
+    """Which account frees up next, and when."""
     parts = []
-    for label, getter in (("session", lambda a: a.session), ("weekly", lambda a: a.weekly)):
-        times = [
-            limit.resets_in_seconds()
-            for limit in (getter(account) for account in healthy)
-            if limit is not None and limit.resets_in_seconds() is not None
-        ]
-        if times:
-            parts.append(f"next {label} reset in {humanize(min(times))}")
-    return paint("  ".join(parts), DIM) if parts else ""
+    for name, group in (("session", SESSION), ("weekly", WEEKLY)):
+        soonest = _soonest_reset(accounts, group)
+        if soonest is None:
+            continue
+        account, seconds = soonest
+        parts.append(
+            paint(f"next {name} reset: ", DIM)
+            + paint(account.label, BOLD)
+            + paint(f" in {humanize(seconds)}", DIM)
+        )
+    return "   ".join(parts)
 
 
 def recommend(accounts: List[AccountUsage], paint: Painter) -> str:
     best = best_account(accounts)
     if best is None:
         return ""
-    name = best.label
     return (
         paint("→ most headroom: ", DIM)
-        + paint(name, BOLD, CYAN)
-        + paint(f"  ({best.headroom:.0f}% free)  ", DIM)
-        + paint(f"export CLAUDE_CONFIG_DIR={best.config_dir}", DIM)
+        + paint(best.label, BOLD, CYAN)
+        + paint(f"  ({best.headroom:.0f}% free)", DIM)
     )
 
 
