@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from cclimits import creds, model, render
+from cclimits import cli, creds, model, render, shell
 
 # A trimmed copy of a real /api/oauth/usage payload.
 USAGE = {
@@ -179,6 +179,25 @@ def test_discovery_ignores_directories_that_are_not_claude_config_dirs(tmp_path,
 
     found = {path.name for path in creds.discover_config_dirs()}
     assert found == {".claude", ".claude-work"}
+
+
+@pytest.mark.parametrize("name", shell.SUPPORTED)
+def test_shell_init_defines_the_cc_function(name):
+    snippet = shell.shell_init(name)
+    assert "cc()" in snippet
+    assert "CLAUDE_CONFIG_DIR" in snippet
+
+
+def test_only_zsh_gets_completion():
+    assert "compdef" in shell.shell_init("zsh")
+    assert "compdef" not in shell.shell_init("bash")
+
+
+def test_shell_init_prints_nothing_else(capsys):
+    """The output is eval'd, so a stray line would be executed as a command."""
+    assert cli.main(["--shell-init", "bash"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("cc()")
 
 
 @pytest.mark.parametrize(

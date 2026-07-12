@@ -21,6 +21,7 @@ from .render import (
     to_dict,
     use_color,
 )
+from .shell import SUPPORTED, shell_init
 
 # The usage endpoint is rate limited; refusing to poll faster than this is what
 # keeps a --watch loop from getting the user 429'd.
@@ -68,6 +69,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--refresh", action="store_true", help="bypass the cache and refetch now"
     )
+    parser.add_argument(
+        "--shell-init",
+        choices=SUPPORTED,
+        metavar="SHELL",
+        help="print the `cc` account-switcher function for zsh or bash; "
+        'add `eval "$(cclimits --shell-init zsh)"` to your rc file',
+    )
     parser.add_argument("--no-color", action="store_true", help="disable ANSI color")
     return parser
 
@@ -103,6 +111,12 @@ def _emit(accounts: List[AccountUsage], args: argparse.Namespace, color: bool) -
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
+
+    # Printed for `eval`, so it must not touch the network or emit anything else.
+    if args.shell_init:
+        print(shell_init(args.shell_init), end="")
+        return 0
+
     color = use_color(False if args.no_color else None)
 
     if args.watch is None:

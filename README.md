@@ -62,17 +62,28 @@ work  /Users/you/.claude-work
   Fable      ████████░░░░  69%  resets in 2d 18h
 ```
 
-### Jump to whichever account has room
+### Switching accounts: the `cc` command
 
-`--best` prints a config dir and nothing else, so you can wire it into your shell:
+Typing `CLAUDE_CONFIG_DIR=~/.claude-account4 claude` gets old fast. Add the shell integration
+to your `~/.zshrc` (or `~/.bashrc`):
 
 ```bash
-cc() {
-  export CLAUDE_CONFIG_DIR="$(cclimits --best)"
-  echo "using $CLAUDE_CONFIG_DIR"
-  claude "$@"
-}
+eval "$(cclimits --shell-init zsh)"    # or: bash
 ```
+
+That gives you `cc`, with tab completion:
+
+```bash
+cc              # show the usage table
+cc 4            # switch to ~/.claude-account4   (1 = your default ~/.claude)
+cc work         # switch to ~/.claude-work
+cc best         # switch to whichever account has the most headroom
+cc which        # print the account currently in use
+```
+
+The switch applies to your current shell, so `claude` then runs on that account until you
+change it or close the terminal. It has to be a shell function rather than a plain
+executable — a child process cannot export a variable back into the shell that started it.
 
 "Most headroom" is the account with the most room on its *binding* limit — the worse of its
 session and weekly numbers. Model-scoped limits are deliberately excluded from that ranking:
