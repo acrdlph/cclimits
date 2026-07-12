@@ -94,6 +94,25 @@ def _account(session: float, weekly: float, fable: float = 0.0) -> model.Account
     )
 
 
+def test_accounts_are_labelled_by_directory_slug_by_default():
+    """No email is shown unless the user opted in, so a screenshot or a status
+    line never leaks an address."""
+    account = _account(10, 20)
+    assert account.email is None
+    assert account.label == "test"
+
+
+def test_label_uses_the_email_once_it_has_been_fetched():
+    account = _account(10, 20)
+    account.email = "someone@example.com"
+    assert account.label == "someone@example.com"
+
+
+def test_table_shows_no_email_by_default():
+    out = render.render_table([_account(10, 20)], color=False)
+    assert "@" not in out
+
+
 def test_headroom_is_set_by_the_binding_general_limit():
     assert _account(session=10, weekly=65).headroom == 35
     assert _account(session=96, weekly=20).headroom == 4

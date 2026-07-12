@@ -8,15 +8,19 @@ to know where you stand is to log into each one and look. `cclimits` reads them 
 parallel and prints one table.
 
 ```
-ACCOUNT              PLAN  SESSION        WEEKLY         FABLE
-you@example.com      max   ░░░░░░░░   6%  █████░░░  65%  ████████ 100%
-you@work.com         max   ████████  96%  ████████  98%  ██████░░  69%
-spare@example.com    max   ░░░░░░░░   5%  ███████░  82%  ████████ 100%
-another@example.com  max   ████████ 100%  ██░░░░░░  21%  █░░░░░░░  16%
+ACCOUNT   PLAN  SESSION        WEEKLY         FABLE
+default   max   ░░░░░░░░   6%  █████░░░  65%  ████████ 100%
+work      max   ████████  96%  ████████  98%  ██████░░  69%
+spare     max   ░░░░░░░░   5%  ███████░  82%  ████████ 100%
+account4  max   ████████ 100%  ██░░░░░░  21%  █░░░░░░░  16%
 
 next session reset in 1h 2m  next weekly reset in 12h 32m
-→ most headroom: you@example.com  (35% free)  export CLAUDE_CONFIG_DIR=/Users/you/.claude
+→ most headroom: default  (35% free)  export CLAUDE_CONFIG_DIR=/Users/you/.claude
 ```
+
+Accounts are named after their config directory, so `~/.claude-work` shows up as `work`.
+**No email address is fetched or stored** unless you ask for one with `--email` — which keeps
+screenshots and status lines clean by default.
 
 It shows every limit the API reports:
 
@@ -47,6 +51,7 @@ PYTHONPATH=src python3 -m cclimits.cli
 ```bash
 cclimits                    # the table above
 cclimits --detail           # every limit, expanded, with reset times
+cclimits --email            # label rows by email instead of directory name
 cclimits --watch            # live, refreshing every 180s
 cclimits --json             # machine-readable
 cclimits --html usage.html  # a self-contained dashboard file
@@ -57,7 +62,7 @@ cclimits --refresh          # bypass the 60s cache
 `--detail` marks the limit that's actually blocking you:
 
 ```
-you@work.com  /Users/you/.claude-account2
+work  /Users/you/.claude-work
   Session    ████████████  96%  resets in 1h 2m
   Weekly     ████████████  98%  resets in 2d 18h  ← blocking you now
   Fable      ████████░░░░  69%  resets in 2d 18h
@@ -180,6 +185,9 @@ and won't get you rate limited.
   token has expired, `cclimits` tells you to run `claude` in that directory once — it does not
   try to fix it itself.
 - **Your tokens never leave your machine**, except to `api.anthropic.com`, which issued them.
+- **It doesn't touch your email addresses** unless you pass `--email`. Without that flag the
+  profile endpoint is never called and no address is written to the cache, so the output is
+  safe to screenshot or pipe into a shared status line.
 - **It doesn't impersonate the Claude Code client.** It sends an honest
   `User-Agent: cclimits/<version>`.
 - It reads credentials only from the Keychain / `.credentials.json`, and never logs or prints
@@ -192,7 +200,7 @@ Two undocumented endpoints — the ones Claude Code's own `/usage` command calls
 | Endpoint | Used for |
 | --- | --- |
 | `GET https://api.anthropic.com/api/oauth/usage` | session, weekly and model-scoped limits |
-| `GET https://api.anthropic.com/api/oauth/profile` | the account's email, to label the row |
+| `GET https://api.anthropic.com/api/oauth/profile` | the account's email — **only when `--email` is passed** |
 
 Both take `Authorization: Bearer <oauth access token>` and `anthropic-beta: oauth-2025-04-20`.
 

@@ -121,7 +121,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
     healthy = [account for account in accounts if account.ok]
     rows = {
         id(account): [
-            paint(account.email or account.slug, BOLD),
+            paint(account.label, BOLD),
             account.plan or "—",
             _cell(account.session, paint),
             _cell(account.weekly, paint),
@@ -132,7 +132,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
 
     name_width = max(
         _visible_len(headers[0]),
-        *(_visible_len(account.email or account.slug) for account in accounts),
+        *(_visible_len(account.label) for account in accounts),
     )
     widths = [name_width] + [
         max(_visible_len(header), *(_visible_len(rows[id(a)][i]) for a in healthy))
@@ -147,7 +147,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
             row = rows[id(account)]
             lines.append("  ".join(_pad(cell, widths[i]) for i, cell in enumerate(row)))
         else:
-            name = _pad(paint(account.email or account.slug, DIM), widths[0])
+            name = _pad(paint(account.label, DIM), widths[0])
             lines.append(f"{name}  {paint(account.error or 'error', RED)}")
 
     lines.append("")
@@ -177,7 +177,7 @@ def recommend(accounts: List[AccountUsage], paint: Painter) -> str:
     best = best_account(accounts)
     if best is None:
         return ""
-    name = best.email or best.slug
+    name = best.label
     return (
         paint("→ most headroom: ", DIM)
         + paint(name, BOLD, CYAN)
@@ -198,7 +198,7 @@ def render_detail(accounts: List[AccountUsage], color: bool = True) -> str:
     paint = Painter(color)
     blocks: List[str] = []
     for account in accounts:
-        title = paint(account.email or account.slug, BOLD)
+        title = paint(account.label, BOLD)
         header = f"{title}  {paint(str(account.config_dir), DIM)}"
         if not account.ok:
             blocks.append(f"{header}\n  {paint(account.error or 'error', RED)}")
@@ -251,7 +251,7 @@ def render_html(accounts: List[AccountUsage]) -> str:
     esc = html_escape.escape
 
     def card(account: AccountUsage) -> str:
-        name = esc(account.email or account.slug)
+        name = esc(account.label)
         if not account.ok:
             return (
                 f'<article class="card err"><h2>{name}</h2>'

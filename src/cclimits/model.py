@@ -70,6 +70,16 @@ class AccountUsage:
     def ok(self) -> bool:
         return self.error is None
 
+    @property
+    def label(self) -> str:
+        """How this account is named in output.
+
+        The directory slug by default. ``email`` is only populated when the user
+        opted in with ``--email``, so addresses never appear unasked — which
+        matters when you screenshot this or pipe it into a status line.
+        """
+        return self.email or self.slug
+
     def find(self, label: str) -> Optional[Limit]:
         for limit in self.limits:
             if limit.label.lower() == label.lower():

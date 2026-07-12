@@ -46,21 +46,33 @@ def _read_cache(config_dir: Path, ttl: float) -> Optional[dict]:
     return blob
 
 
-def _write_cache(config_dir: Path, usage: dict, profile: Optional[dict]) -> None:
-    blob = {"fetched_at": time.time(), "usage": usage, "profile": profile}
+def _write_cache(
+    config_dir: Path, usage: dict, profile: Optional[dict], plan: Optional[str]
+) -> None:
+    blob = {"fetched_at": time.time(), "usage": usage, "profile": profile, "plan": plan}
     try:
         _cache_file(config_dir).write_text(json.dumps(blob))
     except OSError:
         pass  # a cache we cannot write is not an error worth failing on
 
 
-def collect_one(config_dir: Path, ttl: float = DEFAULT_TTL) -> model.AccountUsage:
-    """Usage for a single account. Never raises; failures land in ``.error``."""
+def collect_one(
+    config_dir: Path, ttl: float = DEFAULT_TTL, want_email: bool = False
+) -> model.AccountUsage:
+    """Usage for a single account. Never raises; failures land in ``.error``.
+
+    ``want_email`` also decides whether the profile endpoint is called at all.
+    """
     result = model.AccountUsage(slug=creds.slug_for(config_dir), config_dir=config_dir)
 
     cached = _read_cache(config_dir, ttl)
-    if cached:
-        usage, profile = cached["usage"], cached.get("profile")
+    # An account is identified by its directory. The email is only ever fetched
+    # when the user explicitly asks to see it, so the default run neither
+    # requests nor stores an address anywhere.
+    if cached and (cached.get("profile") or not want_email):
+        usage = cached["usage"]
+        profile = cached.get("profile")
+        result.plan = cached.get("plan")
     else:
         try:
             credentials = creds.load_credentials(config_dir)
@@ -81,21 +93,24 @@ def collect_one(config_dir: Path, ttl: float = DEFAULT_TTL) -> model.AccountUsag
             result.error = str(exc)
             return result
 
-        profile = api.fetch_profile(credentials.access_token)
-        _write_cache(config_dir, usage, profile)
         result.plan = credentials.subscription_type
+        profile = api.fetch_profile(credentials.access_token) if want_email else None
+        _write_cache(config_dir, usage, profile, result.plan)
 
-    email, plan = model.parse_profile(profile)
-    result.email = email
-    result.plan = plan or result.plan
+    if want_email:
+        email, plan = model.parse_profile(profile)
+        result.email = email
+        result.plan = plan or result.plan
     result.limits = model.parse_limits(usage)
     return result
 
 
-def collect_all(config_dirs: List[Path], ttl: float = DEFAULT_TTL) -> List[model.AccountUsage]:
+def collect_all(
+    config_dirs: List[Path], ttl: float = DEFAULT_TTL, want_email: bool = False
+) -> List[model.AccountUsage]:
     """Usage for every account, fetched concurrently, order preserved."""
     if not config_dirs:
         return []
     workers = min(MAX_PARALLEL, len(config_dirs))
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return list(pool.map(lambda d: collect_one(d, ttl), config_dirs))
+        return list(pool.map(lambda d: collect_one(d, ttl, want_email), config_dirs))

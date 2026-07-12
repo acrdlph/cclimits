@@ -44,6 +44,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--detail", action="store_true", help="expand every limit instead of a compact table"
     )
+    parser.add_argument(
+        "--email",
+        action="store_true",
+        help="label accounts by email instead of directory name; without this, "
+        "no address is fetched or stored at all",
+    )
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     parser.add_argument("--html", metavar="FILE", help="write a self-contained dashboard file")
     parser.add_argument(
@@ -69,7 +75,7 @@ def build_parser() -> argparse.ArgumentParser:
 def _gather(args: argparse.Namespace) -> List[AccountUsage]:
     config_dirs = discover_config_dirs(args.dir)
     ttl = 0.0 if args.refresh else DEFAULT_TTL
-    return collect_all(config_dirs, ttl=ttl)
+    return collect_all(config_dirs, ttl=ttl, want_email=args.email)
 
 
 def _emit(accounts: List[AccountUsage], args: argparse.Namespace, color: bool) -> int:
