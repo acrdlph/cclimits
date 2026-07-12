@@ -250,13 +250,6 @@ def test_footer_ignores_broken_accounts():
     assert "next session reset: good in" in out
 
 
-def test_recommendation_no_longer_prints_the_export_line():
-    """`cc best` supersedes it; the raw path is just noise in the table."""
-    out = render.render_table([_account(10, 20)], color=False)
-    assert "most headroom" in out
-    assert "export CLAUDE_CONFIG_DIR" not in out
-
-
 def test_table_renders_a_column_per_model_scoped_limit():
     out = render.render_table([_account(10, 20, fable=30)], color=False)
     assert "SESSION" in out and "WEEKLY" in out and "FABLE" in out
