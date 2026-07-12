@@ -1,0 +1,193 @@
+"""Normalising the usage payload into something renderable.
+
+The interesting part of the payload is the ``limits`` array, whose entries look
+like::
+
+    {"kind": "session",        "percent": 6,   "resets_at": "...", "severity": "normal"}
+    {"kind": "weekly_all",     "percent": 65,  "resets_at": "...", "severity": "normal"}
+    {"kind": "weekly_scoped",  "percent": 100, "resets_at": "...", "severity": "critical",
+     "scope": {"model": {"display_name": "Fable"}}}
+
+Model-scoped limits are read generically. No model name is hardcoded, so a
+promotional model that goes away — or a new one that appears — needs no code
+change here.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import List, Optional
+
+SESSION = "session"
+WEEKLY = "weekly"
+
+
+def _parse_time(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+@dataclass
+class Limit:
+    """One quota bucket for one account."""
+
+    label: str  # "Session", "Weekly", or a model name like "Fable"
+    group: str  # SESSION or WEEKLY
+    percent: float
+    resets_at: Optional[datetime]
+    is_model_scoped: bool = False
+    exhausted_now: bool = False  # the API's is_active: this limit is what's blocking you
+
+    @property
+    def remaining(self) -> float:
+        return max(0.0, 100.0 - self.percent)
+
+    def resets_in_seconds(self, now: Optional[datetime] = None) -> Optional[float]:
+        if self.resets_at is None:
+            return None
+        now = now or datetime.now(timezone.utc)
+        return max(0.0, (self.resets_at - now).total_seconds())
+
+
+@dataclass
+class AccountUsage:
+    """Everything cclimits knows about one account."""
+
+    slug: str
+    config_dir: Path
+    email: Optional[str] = None
+    plan: Optional[str] = None
+    limits: List[Limit] = field(default_factory=list)
+    error: Optional[str] = None
+
+    @property
+    def ok(self) -> bool:
+        return self.error is None
+
+    def find(self, label: str) -> Optional[Limit]:
+        for limit in self.limits:
+            if limit.label.lower() == label.lower():
+                return limit
+        return None
+
+    @property
+    def session(self) -> Optional[Limit]:
+        return self.find("Session")
+
+    @property
+    def weekly(self) -> Optional[Limit]:
+        return self.find("Weekly")
+
+    @property
+    def model_limits(self) -> List[Limit]:
+        return [limit for limit in self.limits if limit.is_model_scoped]
+
+    @property
+    def headroom(self) -> float:
+        """Free capacity on the binding constraint, ignoring model-scoped caps.
+
+        This is what ranks accounts: an account is only as usable as its most
+        consumed of {session, weekly}. Model-scoped limits are excluded because
+        an exhausted Fable cap does not stop you using Sonnet.
+        """
+        general = [limit.percent for limit in self.limits if not limit.is_model_scoped]
+        if not general:
+            return 0.0
+        return max(0.0, 100.0 - max(general))
+
+
+def _display_name(entry: dict) -> Optional[str]:
+    scope = entry.get("scope") or {}
+    model = scope.get("model") or {}
+    return model.get("display_name") or model.get("id")
+
+
+def parse_limits(payload: dict) -> List[Limit]:
+    """Build the limit list, preferring the modern ``limits`` array."""
+    entries = payload.get("limits")
+    if isinstance(entries, list) and entries:
+        return _parse_modern(entries)
+    return _parse_legacy(payload)
+
+
+def _parse_modern(entries: List[dict]) -> List[Limit]:
+    limits: List[Limit] = []
+    for entry in entries:
+        kind = entry.get("kind")
+        if kind == "session":
+            label, scoped = "Session", False
+        elif kind == "weekly_all":
+            label, scoped = "Weekly", False
+        elif kind == "weekly_scoped":
+            name = _display_name(entry)
+            if not name:
+                continue  # a scoped limit we cannot name is not worth a column
+            label, scoped = name, True
+        else:
+            continue
+
+        limits.append(
+            Limit(
+                label=label,
+                group=SESSION if kind == "session" else WEEKLY,
+                percent=float(entry.get("percent") or 0.0),
+                resets_at=_parse_time(entry.get("resets_at")),
+                is_model_scoped=scoped,
+                exhausted_now=bool(entry.get("is_active")),
+            )
+        )
+    return limits
+
+
+def _parse_legacy(payload: dict) -> List[Limit]:
+    """Fallback for older payloads that only had the flat top-level windows."""
+    limits: List[Limit] = []
+    for key, label, group in (
+        ("five_hour", "Session", SESSION),
+        ("seven_day", "Weekly", WEEKLY),
+    ):
+        window = payload.get(key)
+        if isinstance(window, dict) and window.get("utilization") is not None:
+            limits.append(
+                Limit(
+                    label=label,
+                    group=group,
+                    percent=float(window["utilization"]),
+                    resets_at=_parse_time(window.get("resets_at")),
+                )
+            )
+
+    for key, label in (("seven_day_opus", "Opus"), ("seven_day_sonnet", "Sonnet")):
+        window = payload.get(key)
+        if isinstance(window, dict) and window.get("utilization") is not None:
+            limits.append(
+                Limit(
+                    label=label,
+                    group=WEEKLY,
+                    percent=float(window["utilization"]),
+                    resets_at=_parse_time(window.get("resets_at")),
+                    is_model_scoped=True,
+                )
+            )
+    return limits
+
+
+def parse_profile(payload: Optional[dict]) -> tuple:
+    """Pull (email, plan) out of a profile payload."""
+    if not payload:
+        return None, None
+    account = payload.get("account") or {}
+    organization = payload.get("organization") or {}
+    email = account.get("email")
+    plan = organization.get("organization_type") or None
+    if account.get("has_claude_max"):
+        plan = "max"
+    elif account.get("has_claude_pro"):
+        plan = "pro"
+    return email, plan
