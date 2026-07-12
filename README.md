@@ -81,8 +81,19 @@ cc best         # switch to whichever account has the most headroom
 cc which        # print the account currently in use
 ```
 
-The switch applies to your current shell, so `claude` then runs on that account until you
-change it or close the terminal. It has to be a shell function rather than a plain
+Anything after the account is run on it, so you can switch and launch in one go:
+
+```bash
+cc 4 claude
+cc best claude --dangerously-skip-permissions
+cc 2 claude -p "summarise this repo"
+```
+
+Arguments are passed straight through, so every `claude` flag works without `cc` needing to
+know about any of them.
+
+The switch applies to your current shell, so a later bare `claude` runs on that account too,
+until you change it or close the terminal. It has to be a shell function rather than a plain
 executable — a child process cannot export a variable back into the shell that started it.
 
 "Most headroom" is the account with the most room on its *binding* limit — the worse of its

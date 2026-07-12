@@ -21,11 +21,15 @@ cc() {
       ;;
     -h | --help)
       printf '%s\n' \
-        'cc              show the usage table' \
-        'cc <n>          switch to account n (1 = default)' \
-        'cc <name>       switch to ~/.claude-<name>' \
-        'cc best         switch to the account with the most headroom' \
-        'cc which        print the account in use'
+        'cc                    show the usage table' \
+        'cc <n>                switch to account n (1 = default)' \
+        'cc <name>             switch to ~/.claude-<name>' \
+        'cc best               switch to the account with the most headroom' \
+        'cc which              print the account in use' \
+        'cc <target> <cmd>...  switch, then run cmd on that account' \
+        '' \
+        'e.g.  cc 4 claude --dangerously-skip-permissions' \
+        '      cc best claude'
       return 0
       ;;
     which)
@@ -36,9 +40,7 @@ cc() {
       dir="$(cclimits --best)" || return 1
       ;;
     1 | default)
-      unset CLAUDE_CONFIG_DIR
-      printf '→ default\n'
-      return 0
+      dir="$HOME/.claude"
       ;;
     [0-9] | [0-9][0-9])
       dir="$HOME/.claude-account$target"
@@ -61,6 +63,14 @@ cc() {
     export CLAUDE_CONFIG_DIR="$dir"
     printf '→ %s\n' "${dir##*/.claude-}"
   fi
+
+  # Anything after the target is a command to run on the account we just switched
+  # to: `cc 4 claude --dangerously-skip-permissions`. Args are passed through
+  # untouched, so every claude flag works without cc knowing about any of them.
+  if [ "$#" -gt 1 ]; then
+    shift
+    "$@"
+  fi
 }
 """
 
@@ -74,7 +84,12 @@ _cc() {
   done
   _describe 'account' accounts
 }
-compdef _cc cc
+
+# compdef only exists once compinit has run. Guard it, or shells without
+# completion set up print an error on every startup.
+if whence compdef >/dev/null 2>&1; then
+  compdef _cc cc
+fi
 """
 
 _SNIPPETS = {
