@@ -331,20 +331,49 @@ def test_is_active_below_100_percent_does_not_block():
     assert account.blocked_until is None
 
 
-def test_free_in_column_is_filled_only_for_blocked_accounts():
+def test_free_in_column_is_filled_for_blocked_and_near_cap_accounts():
     blocked = model.AccountUsage(
         slug="blocked", config_dir=Path("/tmp/b"), limits=_limits(session=100, weekly=20)
+    )
+    nearcap = model.AccountUsage(
+        slug="nearcap", config_dir=Path("/tmp/n"), limits=_limits(session=10, weekly=95)
     )
     usable = model.AccountUsage(
         slug="usable", config_dir=Path("/tmp/u"), limits=_limits(session=10, weekly=20)
     )
     rows = {
         line.split()[0]: line
-        for line in render.render_table([blocked, usable], color=False).splitlines()
+        for line in render.render_table([blocked, nearcap, usable], color=False).splitlines()
         if line[:1].isalpha()
     }
     assert re.search(r"\d+[hm]\s*$", rows["blocked"]), "blocked account should show a wait"
+    assert re.search(r"\d+[hm]\s*$", rows["nearcap"]), "near-cap account should show a wait"
     assert not re.search(r"\d+[hm]\s*$", rows["usable"]), "usable account should show nothing"
+
+
+def test_free_in_counts_down_the_binding_limit_before_100_percent():
+    """Above the warning threshold, FREE IN surfaces the binding limit's reset
+    even though the account is not yet blocked."""
+    now = datetime.now(timezone.utc)
+    account = _usage(session=10, weekly=95)
+    assert account.blocked_until is None  # not actually blocked
+    assert account.free_in_seconds(now) == account.weekly.resets_in_seconds(now)
+
+
+def test_free_in_is_blank_with_comfortable_headroom():
+    assert _usage(session=10, weekly=88).free_in_seconds() is None
+
+
+def test_free_in_ignores_a_near_cap_model_limit():
+    """A near-full Fable cap must not light up FREE IN — it blocks Fable, not
+    the account, exactly like a fully spent one."""
+    assert _usage(session=10, weekly=10, fable=95).free_in_seconds() is None
+
+
+def test_free_in_uses_the_later_reset_when_both_limits_are_spent():
+    now = datetime.now(timezone.utc)
+    account = _usage(session=100, weekly=100)
+    assert account.free_in_seconds(now) == account.weekly.resets_in_seconds(now)
 
 
 def test_table_shows_the_local_weekly_reset_day():

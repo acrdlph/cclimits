@@ -23,6 +23,11 @@ from typing import List, Optional
 SESSION = "session"
 WEEKLY = "weekly"
 
+# The FREE IN column starts counting down once a binding (non-model-scoped)
+# limit crosses this, not only when it is fully spent at 100%. A limit this
+# close to its cap is worth a heads-up before it actually blocks you.
+FREE_IN_THRESHOLD = 90.0
+
 
 def _parse_time(value: Optional[str]) -> Optional[datetime]:
     if not value:
@@ -128,8 +133,37 @@ class AccountUsage:
         resets = [limit.resets_at for limit in spent if limit.resets_at]
         return max(resets) if resets else None
 
-    def blocked_for_seconds(self, now: Optional[datetime] = None) -> Optional[float]:
-        until = self.blocked_until
+    @property
+    def near_limit_reset(self) -> Optional[datetime]:
+        """When the binding limit resets, once it is near its cap but not yet
+        blocking — the early warning FREE IN shows before an account is spent.
+
+        The binding limit is the most-consumed of the general (non-model-scoped)
+        limits, the same one headroom is measured against. Model-scoped caps are
+        excluded for the same reason they are everywhere else: a spent Fable cap
+        does not stop you using Sonnet, so it must not light up FREE IN.
+        """
+        near = [
+            limit
+            for limit in self.limits
+            if not limit.is_model_scoped
+            and limit.resets_at is not None
+            and limit.percent >= FREE_IN_THRESHOLD
+        ]
+        if not near:
+            return None
+        return max(near, key=lambda limit: limit.percent).resets_at
+
+    def free_in_seconds(self, now: Optional[datetime] = None) -> Optional[float]:
+        """Seconds to show in the FREE IN column, or None to leave it blank.
+
+        When the account is genuinely blocked, this is the accurate usable-again
+        time — the later of the spent limits' resets. Below 100% it becomes a
+        heads-up: the binding limit's reset, shown once it crosses
+        FREE_IN_THRESHOLD. The block time takes precedence, so a fully spent
+        limit is always counted down accurately rather than as a warning.
+        """
+        until = self.blocked_until or self.near_limit_reset
         if until is None:
             return None
         now = now or datetime.now(timezone.utc)

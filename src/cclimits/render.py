@@ -102,8 +102,12 @@ def _weekly_reset_cell(account: AccountUsage) -> str:
 
 
 def _free_cell(account: AccountUsage, paint: Painter, now: datetime) -> str:
-    """How long until a blocked account is usable again; blank if it is usable now."""
-    seconds = account.blocked_for_seconds(now)
+    """When the binding limit resets; blank while it still has comfortable room.
+
+    Shown once the limit is near its cap, not only when it is fully spent — so
+    it doubles as a heads-up before an account actually blocks you.
+    """
+    seconds = account.free_in_seconds(now)
     if seconds is None:
         return ""
     return paint(humanize(seconds), BRIGHT_RED)

@@ -25,7 +25,8 @@
     <text x="349.6" y="80.8" fill="#e6edf3" xml:space="preserve">  98%  </text>
     <text x="408.4" y="80.8" fill="#d29922" xml:space="preserve">██████</text>
     <text x="458.8" y="80.8" fill="#8b949e" xml:space="preserve">░░</text>
-    <text x="475.6" y="80.8" fill="#e6edf3" xml:space="preserve">  69%  Mon 13, 22:00         </text>
+    <text x="475.6" y="80.8" fill="#e6edf3" xml:space="preserve">  69%  Mon 13, 22:00  </text>
+    <text x="660.4" y="80.8" fill="#ff7b72" xml:space="preserve">12h 32m</text>
     <text x="22.0" y="101.8" fill="#e6edf3" font-weight="600" xml:space="preserve">spare</text>
     <text x="64.0" y="101.8" fill="#e6edf3" xml:space="preserve">     max   </text>
     <text x="156.4" y="101.8" fill="#3fb950" xml:space="preserve">█</text>
