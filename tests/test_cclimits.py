@@ -251,15 +251,11 @@ def test_footer_ignores_broken_accounts():
     assert "next session reset: good in" in out
 
 
-def _limits(session, weekly, fable=0, session_active=False, weekly_active=False):
+def _limits(session, weekly, fable=0):
     now = datetime.now(timezone.utc)
     return [
-        model.Limit(
-            "Session", model.SESSION, session, now + timedelta(hours=1), exhausted_now=session_active
-        ),
-        model.Limit(
-            "Weekly", model.WEEKLY, weekly, now + timedelta(days=3), exhausted_now=weekly_active
-        ),
+        model.Limit("Session", model.SESSION, session, now + timedelta(hours=1)),
+        model.Limit("Weekly", model.WEEKLY, weekly, now + timedelta(days=3)),
         model.Limit("Fable", model.WEEKLY, fable, now + timedelta(days=3), is_model_scoped=True),
     ]
 
@@ -288,11 +284,26 @@ def test_a_spent_model_limit_does_not_block_the_account():
     assert _usage(session=5, weekly=5, fable=100).blocked_until is None
 
 
-def test_api_can_flag_a_limit_as_blocking_below_100_percent():
-    """Observed in the wild: weekly reads 98% but the API says it is blocking.
-    The flag is authoritative; the rounded percentage is not."""
-    account = _usage(session=0, weekly=98, weekly_active=True)
-    assert account.blocked_until == account.weekly.resets_at
+def test_is_active_below_100_percent_does_not_block():
+    """Observed in the wild: ``is_active`` marks the account's most-constrained
+    window, not an exhausted one — a weekly at 60% carries the flag while the
+    account is perfectly usable. Only a fully spent limit may block."""
+    payload = {
+        "limits": [
+            {"kind": "session", "percent": 0, "is_active": False, "resets_at": None},
+            {
+                "kind": "weekly_all",
+                "percent": 60,
+                "is_active": True,
+                "resets_at": "2026-07-15T11:59:59+00:00",
+            },
+        ]
+    }
+    account = model.AccountUsage(
+        slug="t", config_dir=Path("/tmp/t"), limits=model.parse_limits(payload)
+    )
+    assert not account.weekly.exhausted_now
+    assert account.blocked_until is None
 
 
 def test_free_in_column_is_filled_only_for_blocked_accounts():

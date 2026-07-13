@@ -42,11 +42,21 @@ class Limit:
     percent: float
     resets_at: Optional[datetime]
     is_model_scoped: bool = False
-    exhausted_now: bool = False  # the API's is_active: this limit is what's blocking you
 
     @property
     def remaining(self) -> float:
         return max(0.0, 100.0 - self.percent)
+
+    @property
+    def exhausted_now(self) -> bool:
+        """Whether this limit is spent, i.e. blocking whatever it scopes.
+
+        Nothing else in the payload can be trusted for this. ``is_active``
+        merely marks the account's most-constrained window — it is true on a
+        3% session — and ``severity`` goes ``critical`` at 99%, when there is
+        still headroom. A limit blocks you exactly when it is fully used.
+        """
+        return self.percent >= 100.0
 
     def resets_in_seconds(self, now: Optional[datetime] = None) -> Optional[float]:
         if self.resets_at is None:
@@ -113,7 +123,7 @@ class AccountUsage:
         spent = [
             limit
             for limit in self.limits
-            if not limit.is_model_scoped and (limit.exhausted_now or limit.percent >= 100)
+            if not limit.is_model_scoped and limit.exhausted_now
         ]
         resets = [limit.resets_at for limit in spent if limit.resets_at]
         return max(resets) if resets else None
@@ -176,7 +186,6 @@ def _parse_modern(entries: List[dict]) -> List[Limit]:
                 percent=float(entry.get("percent") or 0.0),
                 resets_at=_parse_time(entry.get("resets_at")),
                 is_model_scoped=scoped,
-                exhausted_now=bool(entry.get("is_active")),
             )
         )
     return limits

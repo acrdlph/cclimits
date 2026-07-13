@@ -59,7 +59,7 @@ cclimits --refresh          # bypass the 60s cache
 ```
 work  /Users/you/.claude-work
   Session    ████████████  96%  resets in 1h 2m
-  Weekly     ████████████  98%  resets in 2d 18h  ← blocking you now
+  Weekly     ████████████ 100%  resets in 2d 18h  ← blocking you now
   Fable      ████████░░░░  69%  resets in 2d 18h
 ```
 
