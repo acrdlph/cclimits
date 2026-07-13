@@ -13,15 +13,37 @@ The data is fictional on purpose — no real account is published.
 
 from __future__ import annotations
 
+import os
 import re
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from cclimits import render as render_module  # noqa: E402
 from cclimits.model import SESSION, WEEKLY, AccountUsage, Limit  # noqa: E402
 from cclimits.render import render_table  # noqa: E402
+
+# The table shows absolute reset times, so a real clock would make every
+# regeneration differ — the docs must be byte-stable so a diff means the
+# output format actually changed. The data is fictional; so is its clock.
+FROZEN_NOW = datetime(2026, 7, 13, 7, 28, tzinfo=timezone.utc)
+
+# The WEEKLY RESET column renders in local time; pin the timezone too, or the
+# committed docs would depend on which machine regenerated them.
+os.environ["TZ"] = "Europe/Berlin"
+time.tzset()
+
+
+class _FrozenDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return FROZEN_NOW.astimezone(tz) if tz else FROZEN_NOW
+
+
+render_module.datetime = _FrozenDatetime
 
 # The palette the SVG paints ANSI codes with. Chosen to stay legible on GitHub
 # in both light and dark themes, against the dark terminal plate below.
@@ -41,11 +63,10 @@ TOKEN = re.compile(r"\033\[([0-9;]*)m")
 
 
 def demo_accounts() -> list:
-    # Reset times are anchored to "now" so the footer renders the same relative
-    # phrasing a real run would produce.
-    now = datetime.now(timezone.utc)
-    session_reset = now + timedelta(hours=1, minutes=2)
-    weekly_reset = now + timedelta(hours=12, minutes=32)
+    # Reset times are anchored to the frozen "now" so the footer renders the
+    # same relative phrasing a real run would produce.
+    session_reset = FROZEN_NOW + timedelta(hours=1, minutes=2)
+    weekly_reset = FROZEN_NOW + timedelta(hours=12, minutes=32)
 
     def account(slug, session, weekly, fable):
         return AccountUsage(

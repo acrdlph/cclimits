@@ -87,17 +87,18 @@ def _cell(limit: Optional[Limit], paint: Painter) -> str:
 
 
 def _weekly_reset_cell(account: AccountUsage) -> str:
-    """The local calendar day the weekly window rolls over, e.g. 'Wed 15'.
+    """When the weekly window rolls over, in local time: 'Wed 15, 04:59'.
 
     The day of month is included because inside a 7-day window a bare weekday
-    is ambiguous: 'Sun' can mean today or a week from now. Deliberately left
-    unpainted — this is reference information, not a warning.
+    is ambiguous: 'Sun' can mean today or a week from now. The time is the
+    reset instant exactly as the API reports it, never rounded. Deliberately
+    left unpainted — this is reference information, not a warning.
     """
     limit = account.weekly
     if limit is None or limit.resets_at is None:
         return "—"
     local = limit.resets_at.astimezone()
-    return f"{local:%a} {local.day}"
+    return f"{local:%a} {local.day}, {local:%H:%M}"
 
 
 def _free_cell(account: AccountUsage, paint: Painter, now: datetime) -> str:

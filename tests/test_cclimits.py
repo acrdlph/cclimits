@@ -357,7 +357,7 @@ def test_table_shows_the_local_weekly_reset_day():
     out = render.render_table([account], color=False)
     local = reset.astimezone()  # the reader plans in local days, not UTC ones
     assert "WEEKLY RESET" in out
-    assert f"{local:%a} {local.day}" in out
+    assert f"{local:%a} {local.day}, {local:%H:%M}" in out
 
 
 def test_weekly_reset_day_is_never_painted():
@@ -371,9 +371,10 @@ def test_weekly_reset_day_is_never_painted():
     )
     out = render.render_table([account], color=True)
     local = reset.astimezone()
-    day = f"{local:%a} {local.day}"
+    day = f"{local:%a} {local.day}, {local:%H:%M}"
     assert day in out
-    assert f"{day}\033" not in out and not re.search(r"\033\[[0-9;]*m" + day, out)
+    assert f"{day}\033" not in out
+    assert not re.search(r"\033\[[0-9;]*m" + re.escape(day), out)
 
 
 def test_table_renders_a_column_per_model_scoped_limit():

@@ -12,8 +12,8 @@
     <text x="302.4" y="262.4" fill="#8b949e" xml:space="preserve">SESSION      </text>
     <text x="518.4" y="262.4" fill="#8b949e" xml:space="preserve">WEEKLY       </text>
     <text x="734.4" y="262.4" fill="#8b949e" xml:space="preserve">FABLE        </text>
-    <text x="950.4" y="262.4" fill="#8b949e" xml:space="preserve">WEEKLY RESET</text>
-    <text x="1152.0" y="262.4" fill="#8b949e" xml:space="preserve">FREE IN</text>
+    <text x="950.4" y="262.4" fill="#8b949e" xml:space="preserve">WEEKLY RESET </text>
+    <text x="1166.4" y="262.4" fill="#8b949e" xml:space="preserve">FREE IN</text>
     <text x="72.0" y="295.4" fill="#e6edf3" font-weight="600" xml:space="preserve">default</text>
     <text x="172.8" y="295.4" fill="#e6edf3" xml:space="preserve">   max   </text>
     <text x="302.4" y="295.4" fill="#8b949e" xml:space="preserve">░░░░░░░░</text>
@@ -22,7 +22,7 @@
     <text x="590.4" y="295.4" fill="#8b949e" xml:space="preserve">░░░</text>
     <text x="633.6" y="295.4" fill="#e6edf3" xml:space="preserve">  65%  </text>
     <text x="734.4" y="295.4" fill="#ff7b72" xml:space="preserve">████████</text>
-    <text x="849.6" y="295.4" fill="#e6edf3" xml:space="preserve"> 100%  Tue 14               </text>
+    <text x="849.6" y="295.4" fill="#e6edf3" xml:space="preserve"> 100%  Mon 13, 22:00         </text>
     <text x="72.0" y="328.4" fill="#e6edf3" font-weight="600" xml:space="preserve">work</text>
     <text x="129.6" y="328.4" fill="#e6edf3" xml:space="preserve">      max   </text>
     <text x="302.4" y="328.4" fill="#f85149" xml:space="preserve">████████</text>
@@ -31,7 +31,7 @@
     <text x="633.6" y="328.4" fill="#e6edf3" xml:space="preserve">  98%  </text>
     <text x="734.4" y="328.4" fill="#d29922" xml:space="preserve">██████</text>
     <text x="820.8" y="328.4" fill="#8b949e" xml:space="preserve">░░</text>
-    <text x="849.6" y="328.4" fill="#e6edf3" xml:space="preserve">  69%  Tue 14               </text>
+    <text x="849.6" y="328.4" fill="#e6edf3" xml:space="preserve">  69%  Mon 13, 22:00         </text>
     <text x="72.0" y="361.4" fill="#e6edf3" font-weight="600" xml:space="preserve">spare</text>
     <text x="144.0" y="361.4" fill="#e6edf3" xml:space="preserve">     max   </text>
     <text x="302.4" y="361.4" fill="#3fb950" xml:space="preserve">█</text>
@@ -41,7 +41,7 @@
     <text x="619.2" y="361.4" fill="#8b949e" xml:space="preserve">░</text>
     <text x="633.6" y="361.4" fill="#e6edf3" xml:space="preserve">  83%  </text>
     <text x="734.4" y="361.4" fill="#ff7b72" xml:space="preserve">████████</text>
-    <text x="849.6" y="361.4" fill="#e6edf3" xml:space="preserve"> 100%  Tue 14               </text>
+    <text x="849.6" y="361.4" fill="#e6edf3" xml:space="preserve"> 100%  Mon 13, 22:00         </text>
     <text x="72.0" y="394.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account4</text>
     <text x="187.2" y="394.4" fill="#e6edf3" xml:space="preserve">  max   </text>
     <text x="302.4" y="394.4" fill="#ff7b72" xml:space="preserve">████████</text>
@@ -51,8 +51,8 @@
     <text x="633.6" y="394.4" fill="#e6edf3" xml:space="preserve">  21%  </text>
     <text x="734.4" y="394.4" fill="#3fb950" xml:space="preserve">█</text>
     <text x="748.8" y="394.4" fill="#8b949e" xml:space="preserve">░░░░░░░</text>
-    <text x="849.6" y="394.4" fill="#e6edf3" xml:space="preserve">  16%  Tue 14        </text>
-    <text x="1152.0" y="394.4" fill="#ff7b72" xml:space="preserve">1h 1m</text>
+    <text x="849.6" y="394.4" fill="#e6edf3" xml:space="preserve">  16%  Mon 13, 22:00  </text>
+    <text x="1166.4" y="394.4" fill="#ff7b72" xml:space="preserve">1h 2m</text>
     <text x="72.0" y="427.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account5</text>
     <text x="187.2" y="427.4" fill="#e6edf3" xml:space="preserve">  max   </text>
     <text x="302.4" y="427.4" fill="#8b949e" xml:space="preserve">░░░░░░░░</text>
@@ -61,8 +61,8 @@
     <text x="633.6" y="427.4" fill="#e6edf3" xml:space="preserve"> 100%  </text>
     <text x="734.4" y="427.4" fill="#d29922" xml:space="preserve">█████</text>
     <text x="806.4" y="427.4" fill="#8b949e" xml:space="preserve">░░░</text>
-    <text x="849.6" y="427.4" fill="#e6edf3" xml:space="preserve">  65%  Tue 14        </text>
-    <text x="1152.0" y="427.4" fill="#ff7b72" xml:space="preserve">12h 31m</text>
+    <text x="849.6" y="427.4" fill="#e6edf3" xml:space="preserve">  65%  Mon 13, 22:00  </text>
+    <text x="1166.4" y="427.4" fill="#ff7b72" xml:space="preserve">12h 32m</text>
     <text x="72.0" y="460.4" fill="#e6edf3" font-weight="600" xml:space="preserve">account6</text>
     <text x="187.2" y="460.4" fill="#e6edf3" xml:space="preserve">  max   </text>
     <text x="302.4" y="460.4" fill="#ff7b72" xml:space="preserve">████████</text>
@@ -72,14 +72,14 @@
     <text x="633.6" y="460.4" fill="#e6edf3" xml:space="preserve">  59%  </text>
     <text x="734.4" y="460.4" fill="#d29922" xml:space="preserve">██████</text>
     <text x="820.8" y="460.4" fill="#8b949e" xml:space="preserve">░░</text>
-    <text x="849.6" y="460.4" fill="#e6edf3" xml:space="preserve">  77%  Tue 14        </text>
-    <text x="1152.0" y="460.4" fill="#ff7b72" xml:space="preserve">1h 1m</text>
+    <text x="849.6" y="460.4" fill="#e6edf3" xml:space="preserve">  77%  Mon 13, 22:00  </text>
+    <text x="1166.4" y="460.4" fill="#ff7b72" xml:space="preserve">1h 2m</text>
     <text x="72.0" y="526.4" fill="#8b949e" xml:space="preserve">next session reset: </text>
     <text x="360.0" y="526.4" fill="#e6edf3" font-weight="600" xml:space="preserve">default</text>
-    <text x="460.8" y="526.4" fill="#8b949e" xml:space="preserve"> in 1h 1m</text>
+    <text x="460.8" y="526.4" fill="#8b949e" xml:space="preserve"> in 1h 2m</text>
     <text x="633.6" y="526.4" fill="#8b949e" xml:space="preserve">next weekly reset: </text>
     <text x="907.2" y="526.4" fill="#e6edf3" font-weight="600" xml:space="preserve">default</text>
-    <text x="1008.0" y="526.4" fill="#8b949e" xml:space="preserve"> in 12h 31m</text>
+    <text x="1008.0" y="526.4" fill="#8b949e" xml:space="preserve"> in 12h 32m</text>
     <text x="72.0" y="559.4" fill="#8b949e" xml:space="preserve">→ most headroom: </text>
     <text x="316.8" y="559.4" fill="#79c0ff" font-weight="600" xml:space="preserve">default</text>
     <text x="417.6" y="559.4" fill="#8b949e" xml:space="preserve">  (35% free)</text>
