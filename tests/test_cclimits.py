@@ -347,6 +347,35 @@ def test_free_in_column_is_filled_only_for_blocked_accounts():
     assert not re.search(r"\d+[hm]\s*$", rows["usable"]), "usable account should show nothing"
 
 
+def test_table_shows_the_local_weekly_reset_day():
+    reset = datetime.now(timezone.utc) + timedelta(days=2)
+    account = model.AccountUsage(
+        slug="t",
+        config_dir=Path("/tmp/t"),
+        limits=[model.Limit("Weekly", model.WEEKLY, 50, reset)],
+    )
+    out = render.render_table([account], color=False)
+    local = reset.astimezone()  # the reader plans in local days, not UTC ones
+    assert "WEEKLY RESET" in out
+    assert f"{local:%a} {local.day}" in out
+
+
+def test_weekly_reset_day_is_never_painted():
+    """The reset day is reference information: regular weight, default color,
+    even in a colored table."""
+    reset = datetime.now(timezone.utc) + timedelta(days=2)
+    account = model.AccountUsage(
+        slug="t",
+        config_dir=Path("/tmp/t"),
+        limits=[model.Limit("Weekly", model.WEEKLY, 50, reset)],
+    )
+    out = render.render_table([account], color=True)
+    local = reset.astimezone()
+    day = f"{local:%a} {local.day}"
+    assert day in out
+    assert f"{day}\033" not in out and not re.search(r"\033\[[0-9;]*m" + day, out)
+
+
 def test_table_renders_a_column_per_model_scoped_limit():
     out = render.render_table([_account(10, 20, fable=30)], color=False)
     assert "SESSION" in out and "WEEKLY" in out and "FABLE" in out
@@ -357,6 +386,6 @@ def test_broken_account_does_not_widen_the_table():
     broken = model.AccountUsage(
         slug="b", config_dir=Path("/tmp/b"), error="x" * 200
     )
-    out = render.render_table([_account(10, 20), broken], color=False)
-    header = out.splitlines()[0]
-    assert len(header) < 80
+    with_broken = render.render_table([_account(10, 20), broken], color=False)
+    without = render.render_table([_account(10, 20)], color=False)
+    assert len(with_broken.splitlines()[0]) == len(without.splitlines()[0])

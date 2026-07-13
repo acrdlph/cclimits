@@ -9,9 +9,11 @@ parallel and prints one table.
 
 <img src="docs/screenshot.svg" alt="cclimits showing session, weekly and Fable limits for six accounts, with colored usage bars" width="640">
 
-Bars are green under 50%, amber to 80%, red above. **FREE IN** appears only on accounts that
-are actually blocked, and counts down to the moment they can be used again. The account with
-the most room to work in is called out at the bottom.
+Bars are green under 50%, amber to 80%, red above. **WEEKLY RESET** is the local calendar day
+each account's weekly window rolls over — the number you plan around when a weekly limit is
+close. **FREE IN** appears only on accounts that are actually blocked, and counts down to the
+moment they can be used again. The account with the most room to work in is called out at the
+bottom.
 
 Accounts are named after their config directory, so `~/.claude-work` shows up as `work`.
 **No email address is fetched or stored** unless you ask for one with `--email` — which keeps

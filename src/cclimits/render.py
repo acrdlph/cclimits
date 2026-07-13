@@ -86,6 +86,20 @@ def _cell(limit: Optional[Limit], paint: Painter) -> str:
     return text
 
 
+def _weekly_reset_cell(account: AccountUsage) -> str:
+    """The local calendar day the weekly window rolls over, e.g. 'Wed 15'.
+
+    The day of month is included because inside a 7-day window a bare weekday
+    is ambiguous: 'Sun' can mean today or a week from now. Deliberately left
+    unpainted — this is reference information, not a warning.
+    """
+    limit = account.weekly
+    if limit is None or limit.resets_at is None:
+        return "—"
+    local = limit.resets_at.astimezone()
+    return f"{local:%a} {local.day}"
+
+
 def _free_cell(account: AccountUsage, paint: Painter, now: datetime) -> str:
     """How long until a blocked account is usable again; blank if it is usable now."""
     seconds = account.blocked_for_seconds(now)
@@ -137,6 +151,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
         "SESSION",
         "WEEKLY",
         *(name.upper() for name in model_names),
+        "WEEKLY RESET",
         "FREE IN",
     ]
 
@@ -151,6 +166,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
             _cell(account.session, paint),
             _cell(account.weekly, paint),
             *(_cell(account.find(name), paint) for name in model_names),
+            _weekly_reset_cell(account),
             _free_cell(account, paint, now),
         ]
         for account in healthy
