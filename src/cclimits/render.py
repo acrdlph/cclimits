@@ -86,9 +86,9 @@ def _cell(limit: Optional[Limit], paint: Painter) -> str:
     return text
 
 
-def _free_cell(account: AccountUsage, paint: Painter) -> str:
+def _free_cell(account: AccountUsage, paint: Painter, now: datetime) -> str:
     """How long until a blocked account is usable again; blank if it is usable now."""
-    seconds = account.blocked_for_seconds()
+    seconds = account.blocked_for_seconds(now)
     if seconds is None:
         return ""
     return paint(humanize(seconds), BRIGHT_RED)
@@ -116,6 +116,11 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
     paint = Painter(color)
     if not accounts:
         return "No Claude Code accounts found. See `cclimits --help`."
+
+    # One clock sample per render. Every countdown is measured against the same
+    # instant, or durations that are equal in fact compare unequal by the
+    # microseconds between two now() calls — and ties break arbitrarily.
+    now = datetime.now(timezone.utc)
 
     # Model columns are the union across accounts, so a limit that only exists
     # on some plans (a promo model, say) still gets its own column.
@@ -146,7 +151,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
             _cell(account.session, paint),
             _cell(account.weekly, paint),
             *(_cell(account.find(name), paint) for name in model_names),
-            _free_cell(account, paint),
+            _free_cell(account, paint, now),
         ]
         for account in healthy
     }
@@ -172,15 +177,19 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
             lines.append(f"{name}  {paint(account.error or 'error', RED)}")
 
     lines.append("")
-    lines.append(_reset_footer(accounts, paint))
+    lines.append(_reset_footer(accounts, paint, now))
     advice = recommend(accounts, paint)
     if advice:
         lines.append(advice)
     return "\n".join(lines)
 
 
-def _soonest_reset(accounts: List[AccountUsage], group: str):
-    """The (account, seconds) pair whose limit in this group resets first."""
+def _soonest_reset(accounts: List[AccountUsage], group: str, now: datetime):
+    """The (account, seconds) pair whose limit in this group resets first.
+
+    Exact ties go to the account listed first — discovery order, the same
+    order the table shows.
+    """
     candidates = []
     for account in accounts:
         if not account.ok:
@@ -188,17 +197,17 @@ def _soonest_reset(accounts: List[AccountUsage], group: str):
         limit = account.session if group == SESSION else account.weekly
         if limit is None:
             continue
-        seconds = limit.resets_in_seconds()
+        seconds = limit.resets_in_seconds(now)
         if seconds is not None:
             candidates.append((account, seconds))
     return min(candidates, key=lambda pair: pair[1]) if candidates else None
 
 
-def _reset_footer(accounts: List[AccountUsage], paint: Painter) -> str:
+def _reset_footer(accounts: List[AccountUsage], paint: Painter, now: datetime) -> str:
     """Which account frees up next, and when."""
     parts = []
     for name, group in (("session", SESSION), ("weekly", WEEKLY)):
-        soonest = _soonest_reset(accounts, group)
+        soonest = _soonest_reset(accounts, group, now)
         if soonest is None:
             continue
         account, seconds = soonest
@@ -231,6 +240,7 @@ def best_account(accounts: List[AccountUsage]) -> Optional[AccountUsage]:
 
 def render_detail(accounts: List[AccountUsage], color: bool = True) -> str:
     paint = Painter(color)
+    now = datetime.now(timezone.utc)
     blocks: List[str] = []
     for account in accounts:
         title = paint(account.label, BOLD)
@@ -243,7 +253,7 @@ def render_detail(accounts: List[AccountUsage], color: bool = True) -> str:
             flag = paint("  ← blocking you now", BRIGHT_RED) if limit.exhausted_now else ""
             lines.append(
                 f"  {_pad(limit.label, 10)} {bar(limit.percent, paint)} "
-                f"{limit.percent:3.0f}%  {paint('resets in ' + humanize(limit.resets_in_seconds()), DIM)}{flag}"
+                f"{limit.percent:3.0f}%  {paint('resets in ' + humanize(limit.resets_in_seconds(now)), DIM)}{flag}"
             )
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
@@ -251,8 +261,9 @@ def render_detail(accounts: List[AccountUsage], color: bool = True) -> str:
 
 def to_dict(accounts: List[AccountUsage]) -> dict:
     """The --json shape. Stable; script against this rather than the table."""
+    now = datetime.now(timezone.utc)
     return {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": now.isoformat(),
         "accounts": [
             {
                 "slug": account.slug,
@@ -271,7 +282,7 @@ def to_dict(accounts: List[AccountUsage]) -> dict:
                         "model_scoped": limit.is_model_scoped,
                         "exhausted_now": limit.exhausted_now,
                         "resets_at": limit.resets_at.isoformat() if limit.resets_at else None,
-                        "resets_in_seconds": limit.resets_in_seconds(),
+                        "resets_in_seconds": limit.resets_in_seconds(now),
                     }
                     for limit in account.limits
                 ],
@@ -284,6 +295,7 @@ def to_dict(accounts: List[AccountUsage]) -> dict:
 def render_html(accounts: List[AccountUsage]) -> str:
     """A self-contained dashboard file. No network, no fonts, no scripts."""
     esc = html_escape.escape
+    now = datetime.now(timezone.utc)
 
     def card(account: AccountUsage) -> str:
         name = esc(account.label)
@@ -297,7 +309,7 @@ def render_html(accounts: List[AccountUsage]) -> str:
             f'<span class="track"><span class="fill t{_tier(limit.percent)}"'
             f' style="width:{min(100, limit.percent):.0f}%"></span></span>'
             f'<span class="pct">{limit.percent:.0f}%</span>'
-            f'<span class="rst">{esc(humanize(limit.resets_in_seconds()))}</span></div>'
+            f'<span class="rst">{esc(humanize(limit.resets_in_seconds(now)))}</span></div>'
             for limit in account.limits
         )
         plan = esc(account.plan or "")

@@ -244,6 +244,31 @@ def test_footer_names_the_account_that_frees_up_first():
     assert "next weekly reset: later in" in out
 
 
+def test_footer_tiebreak_is_deterministic():
+    """Two accounts whose limits reset at the same instant must not swap places
+    in the footer between runs. Each render measures every countdown against a
+    single clock sample, so an exact tie stays a tie and goes to the account
+    listed first — not to whichever account's now() happened to be called last."""
+    reset = datetime.now(timezone.utc) + timedelta(hours=2)
+
+    def account(slug):
+        return model.AccountUsage(
+            slug=slug,
+            config_dir=Path("/tmp") / slug,
+            limits=[
+                model.Limit("Session", model.SESSION, 50, reset),
+                model.Limit("Weekly", model.WEEKLY, 50, reset),
+            ],
+        )
+
+    accounts = [account("first"), account("second")]
+    names = {
+        re.search(r"next session reset: (\w+)", render.render_table(accounts, color=False))[1]
+        for _ in range(20)
+    }
+    assert names == {"first"}
+
+
 def test_footer_ignores_broken_accounts():
     broken = model.AccountUsage(slug="broken", config_dir=Path("/tmp/b"), error="expired")
     good = _account_with_resets("good", 50, session_in=30, weekly_in=60)
