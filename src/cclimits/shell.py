@@ -16,12 +16,14 @@ cc() {
 
   case "$target" in
     '' | ls | status)
-      cclimits
+      if [ "$#" -gt 0 ]; then shift; fi
+      cclimits "$@"
       return $?
       ;;
     -h | --help)
       printf '%s\n' \
         'cc                    show the usage table' \
+        'cc --email            show the table with an EMAIL column' \
         'cc <n>                switch to account n (1 = default)' \
         'cc <name>             switch to ~/.claude-<name>' \
         'cc best               switch to the account with the most headroom' \
@@ -29,8 +31,15 @@ cc() {
         'cc <target> <cmd>...  switch, then run cmd on that account' \
         '' \
         'e.g.  cc 4 claude --dangerously-skip-permissions' \
-        '      cc best claude'
+        '      cc best claude' \
+        '      cc --detail --refresh'
       return 0
+      ;;
+    -*)
+      # Every other flag is cclimits', not cc's. Without this a `cc --email`
+      # reaches the account branch below and looks for ~/.claude---email.
+      cclimits "$@"
+      return $?
       ;;
     which)
       printf '%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude (default)}"
@@ -76,13 +85,17 @@ cc() {
 
 _ZSH_COMPLETION = r"""
 _cc() {
-  local -a accounts
+  local -a accounts flags
   accounts=(best which default)
   local dir
   for dir in "$HOME"/.claude-*(N/); do
     accounts+=("${dir##*/.claude-}")
   done
   _describe 'account' accounts
+  # The table flags are forwarded to cclimits; offering them here is how you
+  # find out `cc --email` exists without reading the help.
+  flags=(--email --detail --watch --json --refresh --help)
+  _describe 'flag' flags
 }
 
 # compdef only exists once compinit has run. Guard it, or shells without

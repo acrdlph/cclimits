@@ -113,6 +113,15 @@ def _free_cell(account: AccountUsage, paint: Painter, now: datetime) -> str:
     return paint(humanize(seconds), BRIGHT_RED)
 
 
+def _email_cell(account: AccountUsage) -> str:
+    """The account's address. Unpainted, like the reset day: reference, not warning.
+
+    An em dash covers the account whose profile lookup failed while its siblings'
+    succeeded — the column is there, so the row owes it a cell.
+    """
+    return account.email or "—"
+
+
 def _visible_len(text: str) -> int:
     """Length ignoring ANSI escapes, so columns line up when colored."""
     out, in_escape = 0, False
@@ -141,6 +150,12 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
     # microseconds between two now() calls — and ties break arbitrarily.
     now = datetime.now(timezone.utc)
 
+    # An address is only ever populated when --email asked for one, so the data
+    # carries the opt-in: nothing fetched, no column, and no plumbing to thread a
+    # flag down here. Last on the row — addresses are long and ragged, and
+    # trailing them keeps the numbers you scan aligned on the left.
+    show_email = any(account.email for account in accounts)
+
     # Model columns are the union across accounts, so a limit that only exists
     # on some plans (a promo model, say) still gets its own column.
     model_names: List[str] = []
@@ -158,6 +173,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
         *(name.upper() for name in model_names),
         "WEEKLY RESET",
         "FREE IN",
+        *(["EMAIL"] if show_email else []),
     ]
 
     # Broken accounts are rendered as a name plus a free-text reason. They are
@@ -173,6 +189,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
             *(_cell(account.find(name), paint) for name in model_names),
             _weekly_reset_cell(account),
             _free_cell(account, paint, now),
+            *([_email_cell(account)] if show_email else []),
         ]
         for account in healthy
     }
@@ -188,11 +205,22 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
         for i, header in enumerate(headers[1:], start=1)
     ]
 
-    lines = ["  ".join(paint(_pad(h, widths[i]), DIM) for i, h in enumerate(headers))]
+    def join(cells: List[str]) -> str:
+        """Lay cells out on the grid, leaving the last one unpadded.
+
+        Padding the final column buys nothing on screen and costs you a tail of
+        spaces on every row the moment you copy the table out of the terminal —
+        which the EMAIL column, wide and ragged, makes plainly visible.
+        """
+        last = len(cells) - 1
+        return "  ".join(
+            cell if i == last else _pad(cell, widths[i]) for i, cell in enumerate(cells)
+        ).rstrip()
+
+    lines = [join([paint(header, DIM) for header in headers])]
     for account in accounts:
         if account.ok:
-            row = rows[id(account)]
-            lines.append("  ".join(_pad(cell, widths[i]) for i, cell in enumerate(row)))
+            lines.append(join(rows[id(account)]))
         else:
             name = _pad(paint(account.label, DIM), widths[0])
             lines.append(f"{name}  {paint(account.error or 'error', RED)}")

@@ -87,13 +87,13 @@ class AccountUsage:
 
     @property
     def label(self) -> str:
-        """How this account is named in output.
+        """How this account is named in output: its directory slug.
 
-        The directory slug by default. ``email`` is only populated when the user
-        opted in with ``--email``, so addresses never appear unasked — which
-        matters when you screenshot this or pipe it into a status line.
+        Never the address, even once one is known. The slug is what you type to
+        switch (``cc work``), so it has to stay on the row; ``--email`` adds a
+        column beside it rather than renaming it.
         """
-        return self.email or self.slug
+        return self.slug
 
     def find(self, label: str) -> Optional[Limit]:
         for limit in self.limits:

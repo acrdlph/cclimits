@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -103,15 +105,54 @@ def test_accounts_are_labelled_by_directory_slug_by_default():
     assert account.label == "test"
 
 
-def test_label_uses_the_email_once_it_has_been_fetched():
+def test_label_stays_the_slug_even_once_the_email_is_known():
+    """--email adds a column; it does not rename the row. The slug is what you
+    type to switch accounts, so it has to stay on the row."""
     account = _account(10, 20)
     account.email = "someone@example.com"
-    assert account.label == "someone@example.com"
+    assert account.label == "test"
 
 
 def test_table_shows_no_email_by_default():
     out = render.render_table([_account(10, 20)], color=False)
     assert "@" not in out
+    assert "EMAIL" not in out
+
+
+def test_table_gains_a_trailing_email_column_once_addresses_are_fetched():
+    account = _account(10, 20)
+    account.email = "someone@example.com"
+    header, row = render.render_table([account], color=False).splitlines()[:2]
+    assert header.rstrip().endswith("EMAIL")
+    assert row.rstrip().endswith("someone@example.com")
+    assert row.split()[0] == "test", "the slug still names the row"
+
+
+def test_email_column_gives_a_cell_to_an_account_that_has_no_address():
+    """One account's profile lookup failing must not knock the columns out of
+    alignment for the accounts whose lookup worked."""
+    known, unknown = _account(10, 20), _account(30, 40)
+    known.email = "someone@example.com"
+    rows = render.render_table([known, unknown], color=False).splitlines()[1:3]
+    assert rows[1].rstrip().endswith("—")
+
+
+def test_no_row_carries_trailing_whitespace():
+    """The table is made to be copied out of a terminal, and a padded final
+    column puts a tail of spaces on every row when it lands somewhere else."""
+    account = _account(10, 20)
+    account.email = "someone@example.com"
+    for color in (True, False):
+        out = render.render_table([account, _account(30, 40)], color=color)
+        assert all(line == line.rstrip() for line in out.splitlines())
+
+
+def test_email_column_is_never_painted():
+    """An address is reference information, like the reset day: default color."""
+    account = _account(10, 20)
+    account.email = "someone@example.com"
+    out = render.render_table([account], color=True)
+    assert not re.search(r"\033\[[0-9;]*m" + re.escape("someone@example.com"), out)
 
 
 def test_headroom_is_set_by_the_binding_general_limit():
@@ -192,6 +233,55 @@ def test_shell_init_defines_the_cc_function(name):
 def test_only_zsh_gets_completion():
     assert "compdef" in shell.shell_init("zsh")
     assert "compdef" not in shell.shell_init("bash")
+
+
+def _run_cc(home: Path, *args: str) -> str:
+    """Run the real `cc` function under bash, against a fake cclimits and a fake
+    HOME. Nothing here reaches the network: the stub just echoes its arguments.
+    """
+    stub = home / "bin" / "cclimits"
+    stub.parent.mkdir(parents=True, exist_ok=True)
+    stub.write_text('#!/bin/sh\nprintf "cclimits[%s]\\n" "$*"\n')
+    stub.chmod(0o755)
+    env = {
+        "HOME": str(home),
+        "PATH": f"{stub.parent}:{os.environ['PATH']}",
+    }
+    script = shell.shell_init("bash") + "\ncc " + " ".join(args) + "\n"
+    done = subprocess.run(
+        ["bash", "-c", script], capture_output=True, text=True, env=env, check=False
+    )
+    return done.stdout
+
+
+def test_cc_forwards_flags_to_cclimits(tmp_path):
+    """`cc --email` used to fall through to the account branch and hunt for
+    ~/.claude---email. A flag is cclimits', never an account name."""
+    assert _run_cc(tmp_path, "--email").strip() == "cclimits[--email]"
+
+
+def test_cc_forwards_several_flags_at_once(tmp_path):
+    assert _run_cc(tmp_path, "--detail", "--refresh").strip() == "cclimits[--detail --refresh]"
+
+
+def test_bare_cc_still_shows_the_table(tmp_path):
+    assert _run_cc(tmp_path).strip() == "cclimits[]"
+
+
+def test_cc_ls_takes_flags_too(tmp_path):
+    """`ls` names the table, so the flags after it are still the table's."""
+    assert _run_cc(tmp_path, "ls", "--email").strip() == "cclimits[--email]"
+
+
+def test_cc_help_is_ccs_own_not_cclimits(tmp_path):
+    out = _run_cc(tmp_path, "--help")
+    assert "switch to account n" in out
+    assert "cclimits[" not in out
+
+
+def test_cc_still_switches_accounts(tmp_path):
+    (tmp_path / ".claude-work").mkdir()
+    assert "→ work" in _run_cc(tmp_path, "work")
 
 
 def test_shell_init_prints_nothing_else(capsys):

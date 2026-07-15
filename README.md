@@ -16,8 +16,9 @@ an account is fully spent, and a heads-up once that limit crosses 90%, before it
 you. The account with the most room to work in is called out at the bottom.
 
 Accounts are named after their config directory, so `~/.claude-work` shows up as `work`.
-**No email address is fetched or stored** unless you ask for one with `--email` — which keeps
-screenshots and status lines clean by default.
+**No email address is fetched or stored** unless you ask for one with `--email`, which adds a
+trailing **EMAIL** column — so screenshots and status lines stay clean by default, and the
+rows keep the short name you actually type to switch.
 
 It shows every limit the API reports:
 
@@ -48,7 +49,7 @@ PYTHONPATH=src python3 -m cclimits.cli
 ```bash
 cclimits                    # the table above
 cclimits --detail           # every limit, expanded, with reset times
-cclimits --email            # label rows by email instead of directory name
+cclimits --email            # add an EMAIL column with each account's address
 cclimits --watch            # live, refreshing every 180s
 cclimits --json             # machine-readable
 cclimits --html usage.html  # a self-contained dashboard file
@@ -78,11 +79,15 @@ That gives you `cc`, with tab completion:
 
 ```bash
 cc              # show the usage table
+cc --email      # show the table with an EMAIL column
 cc 4            # switch to ~/.claude-account4   (1 = your default ~/.claude)
 cc work         # switch to ~/.claude-work
 cc best         # switch to whichever account has the most headroom
 cc which        # print the account currently in use
 ```
+
+Flags belong to `cclimits` and are forwarded to it, so `cc --detail`, `cc --watch` and the
+rest work from `cc` too.
 
 Anything after the account is run on it, so you can switch and launch in one go:
 

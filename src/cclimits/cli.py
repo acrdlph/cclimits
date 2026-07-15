@@ -48,7 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--email",
         action="store_true",
-        help="label accounts by email instead of directory name; without this, "
+        help="add an EMAIL column with each account's address; without this, "
         "no address is fetched or stored at all",
     )
     parser.add_argument("--json", action="store_true", help="machine-readable output")
