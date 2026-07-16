@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cclimits"
-version = "0.5.0"
+version = "0.5.1"
 description = "See the usage limits of every Claude Code account you own, at once."
 readme = "README.md"
 requires-python = ">=3.9"

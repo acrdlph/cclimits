@@ -93,10 +93,17 @@ def _weekly_reset_cell(account: AccountUsage) -> str:
     is ambiguous: 'Sun' can mean today or a week from now. The time is the
     reset instant exactly as the API reports it, never rounded. Deliberately
     left unpainted — this is reference information, not a warning.
+
+    An account at 0% genuinely has no reset time: the 7-day window is rolling,
+    so it only starts — and its reset only gets scheduled — with the first
+    message. The cell states that, because a bare dash reads as missing data
+    rather than as the fact it is.
     """
     limit = account.weekly
-    if limit is None or limit.resets_at is None:
+    if limit is None:
         return "—"
+    if limit.resets_at is None:
+        return "starts on use" if limit.percent == 0 else "—"
     local = limit.resets_at.astimezone()
     return f"{local:%a} {local.day}, {local:%H:%M}"
 
@@ -165,6 +172,17 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
                 model_names.append(limit.label)
     model_names.sort()
 
+    # Broken accounts are rendered as a name plus a free-text reason. They are
+    # kept out of the width computation so one long error message cannot blow
+    # out the columns for every healthy account.
+    healthy = [account for account in accounts if account.ok]
+
+    # FREE IN earns its place only when some row has something to say. With
+    # every account comfortable, an all-blank column is just a header widening
+    # the table.
+    free_cells = {id(account): _free_cell(account, paint, now) for account in healthy}
+    show_free = any(free_cells.values())
+
     headers = [
         "ACCOUNT",
         "PLAN",
@@ -172,14 +190,10 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
         "WEEKLY",
         *(name.upper() for name in model_names),
         "WEEKLY RESET",
-        "FREE IN",
+        *(["FREE IN"] if show_free else []),
         *(["EMAIL"] if show_email else []),
     ]
 
-    # Broken accounts are rendered as a name plus a free-text reason. They are
-    # kept out of the width computation so one long error message cannot blow
-    # out the columns for every healthy account.
-    healthy = [account for account in accounts if account.ok]
     rows = {
         id(account): [
             paint(account.label, BOLD),
@@ -188,7 +202,7 @@ def render_table(accounts: List[AccountUsage], color: bool = True) -> str:
             _cell(account.weekly, paint),
             *(_cell(account.find(name), paint) for name in model_names),
             _weekly_reset_cell(account),
-            _free_cell(account, paint, now),
+            *([free_cells[id(account)]] if show_free else []),
             *([_email_cell(account)] if show_email else []),
         ]
         for account in healthy

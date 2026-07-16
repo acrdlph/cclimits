@@ -692,3 +692,45 @@ def test_a_non_auth_failure_is_not_treated_as_a_login_problem(tmp_path, monkeypa
     monkeypatch.setattr(collect.refresh, "refresh_credentials", boom)
     account = collect.collect_one(config)
     assert account.error is not None and "rate limited" in account.error
+
+
+# --- empty cells that used to mislead -------------------------------------
+
+
+def test_weekly_reset_names_the_unstarted_window_instead_of_a_dash():
+    """At 0% the API reports no reset time at all: the 7-day window is rolling
+    and only starts — reset included — with the first message. A bare dash
+    reads as missing data, so the cell states the fact instead."""
+    idle = model.AccountUsage(
+        slug="idle",
+        config_dir=Path("/tmp/idle"),
+        limits=[
+            model.Limit("Session", model.SESSION, 0, None),
+            model.Limit("Weekly", model.WEEKLY, 0, None),
+        ],
+    )
+    assert "starts on use" in render.render_table([idle], color=False)
+
+
+def test_a_used_weekly_without_a_reset_time_still_gets_a_dash():
+    """'starts on use' is only true at 0%. A payload that omits the reset on a
+    window that *is* running gets the honest dash, not a wrong explanation."""
+    used = model.AccountUsage(
+        slug="used",
+        config_dir=Path("/tmp/used"),
+        limits=[model.Limit("Weekly", model.WEEKLY, 20, None)],
+    )
+    out = render.render_table([used], color=False)
+    assert "starts on use" not in out
+
+
+def test_free_in_column_appears_only_when_some_row_needs_it():
+    """A column of empty FREE IN cells says nothing; it only earns its header
+    once an account is blocked or near its cap."""
+    comfortable = _account(10, 20)
+    assert "FREE IN" not in render.render_table([comfortable], color=False)
+
+    blocked = model.AccountUsage(
+        slug="blocked", config_dir=Path("/tmp/b"), limits=_limits(session=100, weekly=20)
+    )
+    assert "FREE IN" in render.render_table([comfortable, blocked], color=False)

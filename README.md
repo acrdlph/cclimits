@@ -11,9 +11,12 @@ parallel and prints one table.
 
 Bars are green under 50%, amber to 80%, red above. **WEEKLY RESET** is the local calendar day
 each account's weekly window rolls over — the number you plan around when a weekly limit is
-close. **FREE IN** counts down to the reset of an account's binding limit — the exact wait once
-an account is fully spent, and a heads-up once that limit crosses 90%, before it actually blocks
-you. The account with the most room to work in is called out at the bottom.
+close. An untouched account shows `starts on use` there: the 7-day window is rolling, so its
+reset is only scheduled once the first message is sent. **FREE IN** counts down to the reset of
+an account's binding limit — the exact wait once an account is fully spent, and a heads-up once
+that limit crosses 90%, before it actually blocks you; while every account is comfortable, the
+column stays out of the table entirely. The account with the most room to work in is called out
+at the bottom.
 
 Accounts are named after their config directory, so `~/.claude-work` shows up as `work`.
 **No email address is fetched or stored** unless you ask for one with `--email`, which adds a
