@@ -32,7 +32,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cclimits",
         description="See the usage limits of every Claude Code account you own, at once.",
-        epilog="Read-only: cclimits never writes, refreshes, or rotates your tokens.",
+        epilog="Reading usage is strictly read-only; an expired login is renewed in place, "
+        "exactly as Claude Code itself would renew it (disable with --no-token-refresh).",
     )
     parser.add_argument("--version", action="version", version=f"cclimits {__version__}")
     parser.add_argument(
@@ -70,6 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--refresh", action="store_true", help="bypass the cache and refetch now"
     )
     parser.add_argument(
+        "--no-token-refresh",
+        action="store_true",
+        help="leave expired logins alone instead of renewing them automatically",
+    )
+    parser.add_argument(
         "--shell-init",
         choices=SUPPORTED,
         metavar="SHELL",
@@ -83,7 +89,12 @@ def build_parser() -> argparse.ArgumentParser:
 def _gather(args: argparse.Namespace) -> List[AccountUsage]:
     config_dirs = discover_config_dirs(args.dir)
     ttl = 0.0 if args.refresh else DEFAULT_TTL
-    return collect_all(config_dirs, ttl=ttl, want_email=args.email)
+    return collect_all(
+        config_dirs,
+        ttl=ttl,
+        want_email=args.email,
+        renew_logins=not args.no_token_refresh,
+    )
 
 
 def _emit(accounts: List[AccountUsage], args: argparse.Namespace, color: bool) -> int:

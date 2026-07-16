@@ -26,7 +26,12 @@ OAUTH_BETA = "oauth-2025-04-20"
 
 
 class ApiError(Exception):
-    """The API call failed."""
+    """The API call failed. ``status`` lets a caller tell an auth rejection —
+    which a token renewal can cure — from every other failure, which it can't."""
+
+    def __init__(self, message: str, status: Optional[int] = None):
+        super().__init__(message)
+        self.status = status
 
 
 def _get(url: str, token: str, timeout: float) -> dict:
@@ -45,10 +50,14 @@ def _get(url: str, token: str, timeout: float) -> dict:
             return json.loads(response.read().decode())
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
-            raise ApiError("token rejected (expired or revoked) — log in again") from exc
+            raise ApiError(
+                "token rejected (expired or revoked) — log in again", status=exc.code
+            ) from exc
         if exc.code == 429:
-            raise ApiError("rate limited by the usage endpoint — poll less often") from exc
-        raise ApiError(f"HTTP {exc.code} from {url}") from exc
+            raise ApiError(
+                "rate limited by the usage endpoint — poll less often", status=exc.code
+            ) from exc
+        raise ApiError(f"HTTP {exc.code} from {url}", status=exc.code) from exc
     except urllib.error.URLError as exc:
         raise ApiError(f"network error: {exc.reason}") from exc
     except json.JSONDecodeError as exc:

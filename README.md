@@ -200,14 +200,23 @@ and won't get you rate limited.
 
 ## Safety
 
-**`cclimits` is strictly read-only.** It issues two `GET` requests and nothing else.
+**`cclimits` changes nothing about your accounts, with one deliberate exception: it renews an
+expired login.** Reading usage is strictly `GET`s.
 
-- **It never writes, refreshes, or rotates your tokens.** This is deliberate. Refreshing a
-  token means the server may rotate the refresh token; a tool that did that and failed to
-  persist the new one would silently break your real Claude Code login. So when an access
-  token has expired, `cclimits` tells you to run `claude` in that directory once — it does not
-  try to fix it itself.
-- **Your tokens never leave your machine**, except to `api.anthropic.com`, which issued them.
+- **When an access token has expired, cclimits refreshes it the way Claude Code itself
+  does** — the same OAuth `refresh_token` grant Claude Code runs on launch, under Claude
+  Code's own client id, saved back to the same store (Keychain on macOS,
+  `.credentials.json` elsewhere). The next `claude` you open picks up the renewed login as
+  if the client had refreshed it itself. The server rotates the refresh token on every
+  renewal, so losing the new one is the failure that matters: the write is verified by
+  reading the store back, and a per-account lock keeps two concurrent runs (say, a status
+  line firing on every prompt) from racing the rotation. If renewal is impossible — no
+  refresh token stored, or the server rejects it — the row tells you which directory to log
+  in to, like before.
+- **Prefer the old strictly-read-only behavior?** Pass `--no-token-refresh`: expired
+  accounts are then only reported, and cclimits writes nothing, ever.
+- **Your tokens never leave your machine**, except to `api.anthropic.com` and
+  `console.anthropic.com`, which issued them.
 - **It doesn't touch your email addresses** unless you pass `--email`. Without that flag the
   profile endpoint is never called and no address is written to the cache, so the output is
   safe to screenshot or pipe into a shared status line.
@@ -218,14 +227,17 @@ and won't get you rate limited.
 
 ## How it works
 
-Two undocumented endpoints — the ones Claude Code's own `/usage` command calls:
+Three undocumented endpoints — the ones Claude Code itself calls for `/usage` and for its
+own token refresh:
 
 | Endpoint | Used for |
 | --- | --- |
 | `GET https://api.anthropic.com/api/oauth/usage` | session, weekly and model-scoped limits |
 | `GET https://api.anthropic.com/api/oauth/profile` | the account's email — **only when `--email` is passed** |
+| `POST https://console.anthropic.com/v1/oauth/token` | renewing a login — **only when its token has expired or been rejected** |
 
-Both take `Authorization: Bearer <oauth access token>` and `anthropic-beta: oauth-2025-04-20`.
+The `GET`s take `Authorization: Bearer <oauth access token>` and
+`anthropic-beta: oauth-2025-04-20`.
 
 **Stability caveat:** these endpoints are not documented or guaranteed by Anthropic. They
 power a feature in the shipping client, so they're unlikely to vanish quietly, but the schema

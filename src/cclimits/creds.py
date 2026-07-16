@@ -8,9 +8,9 @@ directory carries its own credentials:
   default ``~/.claude`` historically uses the unsuffixed ``Claude Code-credentials``.
 * **Linux / Windows** — a ``.credentials.json`` file inside the config directory.
 
-Everything here is read-only. We never write, refresh, or rotate a token: a
-refresh token that the server rotated but we failed to persist would silently
-break the user's real Claude Code login.
+Everything in this module is read-only. The one writer in cclimits is
+``refresh.py``, which renews an expired login the way Claude Code itself
+would and persists it back through the same stores described above.
 """
 
 from __future__ import annotations
@@ -96,18 +96,17 @@ def _keychain_services(config_dir: Path) -> Iterator[str]:
         yield KEYCHAIN_SERVICE
 
 
-def _read_keychain(config_dir: Path) -> Optional[dict]:
-    for service in _keychain_services(config_dir):
-        proc = subprocess.run(
-            ["security", "find-generic-password", "-s", service, "-w"],
-            capture_output=True,
-            text=True,
-        )
-        if proc.returncode == 0 and proc.stdout.strip():
-            try:
-                return json.loads(proc.stdout)
-            except json.JSONDecodeError as exc:
-                raise CredentialError(f"Keychain entry {service!r} is not valid JSON") from exc
+def _keychain_blob(service: str) -> Optional[dict]:
+    proc = subprocess.run(
+        ["security", "find-generic-password", "-s", service, "-w"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        try:
+            return json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise CredentialError(f"Keychain entry {service!r} is not valid JSON") from exc
     return None
 
 
@@ -121,20 +120,35 @@ def _read_file(config_dir: Path) -> Optional[dict]:
         raise CredentialError(f"{path} is not valid JSON") from exc
 
 
+def locate_store(config_dir: Path) -> "tuple[Optional[dict], Optional[str]]":
+    """The raw credentials blob for a config dir, and where it lives.
+
+    Returns ``(blob, keychain_service)``; a service of ``None`` means the file
+    store, and ``(None, None)`` means no credentials at all. The *where*
+    matters to ``refresh.py``, which must write a renewed login back to the
+    exact store the original came from.
+    """
+    if sys.platform == "darwin":
+        for service in _keychain_services(config_dir):
+            blob = _keychain_blob(service)
+            if blob is not None:
+                return blob, service
+    return _read_file(config_dir), None
+
+
 def load_credentials(config_dir: Path) -> Credentials:
     """Read credentials for one config directory, or raise CredentialError."""
-    blob = None
-    if sys.platform == "darwin":
-        blob = _read_keychain(config_dir)
-    if blob is None:
-        blob = _read_file(config_dir)
-
+    blob, _ = locate_store(config_dir)
     if blob is None:
         raise CredentialError(
             "no credentials found — log in with "
             f"`CLAUDE_CONFIG_DIR={config_dir} claude`"
         )
+    return parse_blob(blob)
 
+
+def parse_blob(blob: dict) -> Credentials:
+    """Credentials from a raw store blob, or CredentialError if it holds none."""
     oauth = blob.get("claudeAiOauth") or {}
     token = oauth.get("accessToken")
     if not token:

@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Optional
 
-from . import api, creds, model
+from . import api, creds, model, refresh
 
 DEFAULT_TTL = 60.0  # seconds
 MAX_PARALLEL = 8
@@ -57,11 +57,16 @@ def _write_cache(
 
 
 def collect_one(
-    config_dir: Path, ttl: float = DEFAULT_TTL, want_email: bool = False
+    config_dir: Path,
+    ttl: float = DEFAULT_TTL,
+    want_email: bool = False,
+    renew_logins: bool = True,
 ) -> model.AccountUsage:
     """Usage for a single account. Never raises; failures land in ``.error``.
 
     ``want_email`` also decides whether the profile endpoint is called at all.
+    ``renew_logins`` lets an expired or rejected token be refreshed in place,
+    exactly as Claude Code would refresh it, instead of being reported.
     """
     result = model.AccountUsage(slug=creds.slug_for(config_dir), config_dir=config_dir)
 
@@ -81,17 +86,37 @@ def collect_one(
             return result
 
         if credentials.is_expired:
-            result.error = (
-                "access token expired — run `CLAUDE_CONFIG_DIR="
-                f"{config_dir} claude` once to refresh it"
-            )
-            return result
+            if not renew_logins:
+                result.error = (
+                    "access token expired — run `CLAUDE_CONFIG_DIR="
+                    f"{config_dir} claude` once to refresh it"
+                )
+                return result
+            try:
+                credentials = refresh.refresh_credentials(
+                    config_dir, stale_token=credentials.access_token
+                )
+            except refresh.RefreshError as exc:
+                result.error = str(exc)
+                return result
 
         try:
             usage = api.fetch_usage(credentials.access_token)
         except api.ApiError as exc:
-            result.error = str(exc)
-            return result
+            # Expiry is checked locally, but revocation is the server's call:
+            # an auth rejection on a fresh-looking token gets one renewal and
+            # one retry, never a loop.
+            if not (renew_logins and exc.status in (401, 403)):
+                result.error = str(exc)
+                return result
+            try:
+                credentials = refresh.refresh_credentials(
+                    config_dir, stale_token=credentials.access_token
+                )
+                usage = api.fetch_usage(credentials.access_token)
+            except (refresh.RefreshError, api.ApiError) as retry_exc:
+                result.error = str(retry_exc)
+                return result
 
         result.plan = credentials.subscription_type
         profile = api.fetch_profile(credentials.access_token) if want_email else None
@@ -106,11 +131,16 @@ def collect_one(
 
 
 def collect_all(
-    config_dirs: List[Path], ttl: float = DEFAULT_TTL, want_email: bool = False
+    config_dirs: List[Path],
+    ttl: float = DEFAULT_TTL,
+    want_email: bool = False,
+    renew_logins: bool = True,
 ) -> List[model.AccountUsage]:
     """Usage for every account, fetched concurrently, order preserved."""
     if not config_dirs:
         return []
     workers = min(MAX_PARALLEL, len(config_dirs))
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        return list(pool.map(lambda d: collect_one(d, ttl, want_email), config_dirs))
+        return list(
+            pool.map(lambda d: collect_one(d, ttl, want_email, renew_logins), config_dirs)
+        )

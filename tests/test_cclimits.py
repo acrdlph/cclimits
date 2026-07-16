@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import subprocess
+import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
-from cclimits import cli, creds, model, render, shell
+from cclimits import api, cli, collect, creds, model, refresh, render, shell
 
 # A trimmed copy of a real /api/oauth/usage payload.
 USAGE = {
@@ -509,3 +512,183 @@ def test_broken_account_does_not_widen_the_table():
     with_broken = render.render_table([_account(10, 20), broken], color=False)
     without = render.render_table([_account(10, 20)], color=False)
     assert len(with_broken.splitlines()[0]) == len(without.splitlines()[0])
+
+
+# --- token renewal -------------------------------------------------------
+
+
+def _blob(access="old-token", refresh_token="old-refresh", expires_ms=1):
+    """A store blob shaped like Claude Code's, with a neighbour key that must
+    survive any rewrite untouched."""
+    return {
+        "claudeAiOauth": {
+            "accessToken": access,
+            "refreshToken": refresh_token,
+            "expiresAt": expires_ms,
+            "subscriptionType": "max",
+            "scopes": ["user:inference"],
+        },
+        "mcpOAuth": {"some-server": {"accessToken": "mcp-token"}},
+    }
+
+
+def test_merge_touches_only_what_the_token_response_speaks_to():
+    payload = {
+        "access_token": "new-token",
+        "expires_in": 28800,
+        "refresh_token": "new-refresh",
+        "refresh_token_expires_in": 500000,
+    }
+    blob = _blob()
+    merged = refresh.merge_response(blob, payload, now=1000.0)
+    oauth = merged["claudeAiOauth"]
+    assert oauth["accessToken"] == "new-token"
+    assert oauth["refreshToken"] == "new-refresh"
+    assert oauth["expiresAt"] == int((1000.0 + 28800) * 1000)
+    assert oauth["refreshTokenExpiresAt"] == int((1000.0 + 500000) * 1000)
+    assert oauth["subscriptionType"] == "max", "fields the response is silent on stay put"
+    assert oauth["scopes"] == ["user:inference"]
+    assert merged["mcpOAuth"] == blob["mcpOAuth"], "Claude Code's other keys ride along"
+    assert blob["claudeAiOauth"]["accessToken"] == "old-token", "input blob is not mutated"
+
+
+def test_merge_keeps_the_old_refresh_token_when_none_is_returned():
+    merged = refresh.merge_response(_blob(), {"access_token": "n", "expires_in": 1}, now=0.0)
+    assert merged["claudeAiOauth"]["refreshToken"] == "old-refresh"
+
+
+def _file_store(tmp_path, monkeypatch, blob) -> Path:
+    """A config dir whose credentials live in .credentials.json, plus the env
+    that keeps locks and caches inside tmp_path. Forces the file store so no
+    test ever touches a real Keychain."""
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    config = tmp_path / ".claude-work"
+    config.mkdir(exist_ok=True)
+    path = config / ".credentials.json"
+    path.write_text(json.dumps(blob))
+    path.chmod(0o600)
+    return config
+
+
+def test_renewal_persists_the_rotated_tokens_to_the_store(tmp_path, monkeypatch):
+    """The server rotates the refresh token on every renewal; losing the new
+    one would break the real Claude Code login. The rotated pair must land in
+    the store, with the file's private permissions intact."""
+    config = _file_store(tmp_path, monkeypatch, _blob())
+    monkeypatch.setattr(
+        refresh,
+        "_post_refresh",
+        lambda token, config_dir: {
+            "access_token": "new-token",
+            "expires_in": 28800,
+            "refresh_token": "new-refresh",
+        },
+    )
+
+    renewed = refresh.refresh_credentials(config, stale_token="old-token")
+
+    assert renewed.access_token == "new-token"
+    assert not renewed.is_expired
+    stored = json.loads((config / ".credentials.json").read_text())
+    assert stored["claudeAiOauth"]["refreshToken"] == "new-refresh"
+    assert stored["mcpOAuth"] == _blob()["mcpOAuth"]
+    assert ((config / ".credentials.json").stat().st_mode & 0o777) == 0o600
+
+
+def test_renewal_skips_the_request_when_another_process_already_renewed(tmp_path, monkeypatch):
+    """A second process waiting on the account lock must notice the store
+    already holds a token that is fresh and *different* from the one it saw
+    fail, and use that instead of spending another rotation."""
+    fresh_ms = int((time.time() + 3600) * 1000)
+    config = _file_store(
+        tmp_path, monkeypatch, _blob(access="already-fresh", expires_ms=fresh_ms)
+    )
+
+    def boom(token, config_dir):
+        raise AssertionError("no request should be made")
+
+    monkeypatch.setattr(refresh, "_post_refresh", boom)
+    renewed = refresh.refresh_credentials(config, stale_token="the-token-that-401d")
+    assert renewed.access_token == "already-fresh"
+
+
+def test_renewal_without_a_stored_refresh_token_asks_for_a_login(tmp_path, monkeypatch):
+    config = _file_store(tmp_path, monkeypatch, _blob(refresh_token=None))
+    with pytest.raises(refresh.RefreshError, match=re.escape(f"CLAUDE_CONFIG_DIR={config}")):
+        refresh.refresh_credentials(config, stale_token="old-token")
+
+
+def test_collect_renews_an_expired_login_and_fetches_with_the_new_token(tmp_path, monkeypatch):
+    config = _file_store(tmp_path, monkeypatch, _blob())
+    monkeypatch.setattr(
+        refresh,
+        "_post_refresh",
+        lambda token, config_dir: {"access_token": "new-token", "expires_in": 28800},
+    )
+    tokens_used = []
+
+    def fake_fetch(token):
+        tokens_used.append(token)
+        return USAGE
+
+    monkeypatch.setattr(collect.api, "fetch_usage", fake_fetch)
+
+    account = collect.collect_one(config)
+
+    assert account.error is None
+    assert tokens_used == ["new-token"], "the fetch must use the renewed token"
+    assert [limit.label for limit in account.limits] == ["Session", "Weekly", "Fable"]
+
+
+def test_no_token_refresh_reports_the_expiry_instead(tmp_path, monkeypatch):
+    config = _file_store(tmp_path, monkeypatch, _blob())
+
+    def boom(config_dir, stale_token=None):
+        raise AssertionError("renewal must not run when the user opted out")
+
+    monkeypatch.setattr(collect.refresh, "refresh_credentials", boom)
+    account = collect.collect_one(config, renew_logins=False)
+    assert account.error is not None and "expired" in account.error
+
+
+def test_a_rejected_token_is_renewed_once_and_retried(tmp_path, monkeypatch):
+    """Expiry is checked locally, but revocation is the server's call: a 401
+    on a fresh-looking token gets exactly one renewal and one retry."""
+    fresh_ms = int((time.time() + 3600) * 1000)
+    config = _file_store(tmp_path, monkeypatch, _blob(access="revoked", expires_ms=fresh_ms))
+    monkeypatch.setattr(
+        refresh,
+        "_post_refresh",
+        lambda token, config_dir: {"access_token": "new-token", "expires_in": 28800},
+    )
+    tokens_used = []
+
+    def fake_fetch(token):
+        tokens_used.append(token)
+        if token == "revoked":
+            raise api.ApiError("token rejected", status=401)
+        return USAGE
+
+    monkeypatch.setattr(collect.api, "fetch_usage", fake_fetch)
+
+    account = collect.collect_one(config)
+
+    assert account.error is None
+    assert tokens_used == ["revoked", "new-token"]
+
+
+def test_a_non_auth_failure_is_not_treated_as_a_login_problem(tmp_path, monkeypatch):
+    fresh_ms = int((time.time() + 3600) * 1000)
+    config = _file_store(tmp_path, monkeypatch, _blob(expires_ms=fresh_ms))
+
+    def rate_limited(token):
+        raise api.ApiError("rate limited by the usage endpoint — poll less often", status=429)
+
+    def boom(config_dir, stale_token=None):
+        raise AssertionError("a 429 is not cured by a new token")
+
+    monkeypatch.setattr(collect.api, "fetch_usage", rate_limited)
+    monkeypatch.setattr(collect.refresh, "refresh_credentials", boom)
+    account = collect.collect_one(config)
+    assert account.error is not None and "rate limited" in account.error
